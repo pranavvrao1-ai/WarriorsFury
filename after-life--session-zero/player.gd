@@ -9,6 +9,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera3D
+@onready var third_person_camera: Camera3D = $Head/ThirdPersonCamera
 
 var is_frozen: bool = false
 var _mouse_captured: bool = false
@@ -28,6 +29,7 @@ var _run_anim: StringName = &""
 var _was_moving: bool = false
 var _character_anim_time: float = 0.0
 var _headbob_time: float = 0.0
+var _third_person_view: bool = false
 
 var _current_interactable: Dictionary = {}
 
@@ -52,7 +54,7 @@ func _attach_character_model() -> void:
 	_character_visual.name = "PlayerCharacterVisual"
 	# This build is first-person: keep the full-body visual hidden from the gameplay camera.
 	# The imported GLB remains instantiated for animation hooks and can be enabled for third-person later.
-	_character_visual.visible = false
+	_character_visual.visible = _third_person_view
 	_character_visual.position = Vector3.ZERO
 	add_child(_character_visual)
 	_play_idle_animation(_character_visual)
@@ -105,7 +107,7 @@ func _create_hud() -> void:
 	_hud_label.position = Vector2(24, 20)
 	_hud_label.add_theme_font_size_override("font_size", 16)
 	_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
-	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
+	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
 	canvas.add_child(_hud_label)
 
 	# Interaction prompt in bottom-center
@@ -165,10 +167,26 @@ func _unhandled_input(event: InputEvent) -> void:
 			_switch_to_cam(0)
 		elif event.keycode == KEY_E and _cctv_index == 0:
 			_try_interact()
+		elif event.keycode == KEY_V and _cctv_index == 0:
+			_set_third_person_view(not _third_person_view)
 	elif event is InputEventMouseMotion and _mouse_captured and _cctv_index == 0:
 		rotate_y(-event.relative.x * look_sensitivity)
 		head.rotate_x(-event.relative.y * look_sensitivity)
 		head.rotation.x = clamp(head.rotation.x, -1.4, 1.4)
+
+func _set_third_person_view(enabled: bool) -> void:
+	_third_person_view = enabled
+	if _character_visual != null:
+		_character_visual.visible = enabled
+	if enabled:
+		third_person_camera.make_current()
+	else:
+		camera.make_current()
+	if _hud_label != null:
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
+
+func _active_player_camera() -> Camera3D:
+	return third_person_camera if _third_person_view else camera
 
 func _try_interact() -> void:
 	if _current_interactable.is_empty():
@@ -186,8 +204,8 @@ func _show_banner(msg: String) -> void:
 func _switch_to_cam(index: int) -> void:
 	_cctv_index = index
 	if _cctv_index == 0:
-		camera.make_current()
-		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
+		_active_player_camera().make_current()
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
 		_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
 		_interact_label.visible = true
 	else:
