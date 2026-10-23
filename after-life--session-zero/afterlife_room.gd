@@ -1596,7 +1596,7 @@ func _spawn_simulation_enemy(parent: Node3D, enemy_name: String, spawn_position:
 func get_needen_enemy_count() -> int:
 	var count := 0
 	for node in get_tree().get_nodes_in_group("simulation_enemy"):
-		if is_instance_valid(node) and node.is_visible_in_tree():
+		if is_instance_valid(node):
 			count += 1
 	return count
 
