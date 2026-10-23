@@ -136,7 +136,7 @@ func _animate_robot(delta: float) -> void:
 		var dir := cam.global_position - robot_root.global_position
 		dir.y = 0.0
 		if dir.length() > 0.5 and dir.length() < 18.0:
-			var target_rot_y := atan2(dir.x, dir.z)
+			var target_rot_y := atan2(dir.x, dir.z) - robot_root.global_rotation.y
 			robot_head.rotation.y = lerp_angle(robot_head.rotation.y, target_rot_y, delta * 2.5)
 
 func _animate_security_cameras(delta: float) -> void:
@@ -382,7 +382,7 @@ func _attach_robot_asset() -> void:
 
 func _make_asset_characters() -> void:
 	_spawn_character_asset("res://characters/male1.glb", "Cafe guest A", Vector3(-10.0, 0.0, -5.0))
-	_spawn_character_asset("res://characters/female4.glb", "Cafe guest B", Vector3(-6.0, 0.0, -5.0))
+	_spawn_character_asset("res://characters/female4.glb", "Cafe Shopkeeper", Vector3(6.5, 0.0, HALF + 4.5))
 	_spawn_character_asset("res://characters/male4.glb", "Cafe guest C", Vector3(9.0, 0.0, -5.0))
 
 func _spawn_character_asset(path: String, node_name: String, spawn_position: Vector3) -> void:
@@ -398,19 +398,28 @@ func _spawn_character_asset(path: String, node_name: String, spawn_position: Vec
 		return
 	character.name = node_name
 	character.position = spawn_position
+	if node_name == "Cafe Shopkeeper":
+		# Keep the shopkeeper outside the cafe and facing the entrance for the whole game.
+		character.rotation.y = PI
+		_city_exterior_nodes.append(character)
 	add_child(character)
 	_play_first_character_animation(character)
 
 func _play_first_character_animation(root: Node) -> void:
+	# Prefer a calm, repeatable standing animation. Never blindly play the first
+	# imported clip: it may be a walk, attack, fall, or one-shot pose.
 	if root is AnimationPlayer:
 		var animator := root as AnimationPlayer
 		var animations := animator.get_animation_list()
-		for animation_name in animations:
-			var lower_name := String(animation_name).to_lower()
-			if lower_name.contains("idle"):
-				animator.play(animation_name)
-				return
-		if not animations.is_empty():
+		var preferred_terms := ["idle", "stand", "wait", "relax", "look", "talk", "breath"]
+		for term in preferred_terms:
+			for animation_name in animations:
+				if String(animation_name).to_lower().contains(term):
+					animator.play(animation_name)
+					return
+		# GLB exporters sometimes give a single looping idle clip a generic name.
+		# Use it only when it is the sole clip; don't select randomly among actions.
+		if animations.size() == 1:
 			animator.play(animations[0])
 			return
 	for child in root.get_children():
@@ -419,7 +428,9 @@ func _play_first_character_animation(root: Node) -> void:
 func _make_robot() -> void:
 	robot_root = Node3D.new()
 	robot_root.name = "Robot operator"
-	robot_root.position = Vector3(0, 0, -17.2)
+	robot_root.position = Vector3(0, 0, HALF + 4.0)
+	# Guard the outside of the entrance and face inward toward approaching visitors.
+	robot_root.rotation.y = PI
 	robot_base_y = 0.0
 	add_child(robot_root)
 
