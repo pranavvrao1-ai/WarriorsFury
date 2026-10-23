@@ -40,3 +40,5 @@ jobs:
         run: godot --headless --path . --editor --import --quit
       - name: Parse scripts and boot main scene
         run: godot --headless --path . --quit-after 180 --verbose
+      - name: Run Godot integration smoke tests
+        run: godot --headless --path . --script res://tests/godot_smoke_test.gd
