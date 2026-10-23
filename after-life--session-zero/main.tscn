@@ -1,0 +1,18 @@
+[gd_scene format=3 uid="uid://vn2ms7ng00tx"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_theap"]
+size = Vector2(20, 20)
+
+[sub_resource type="BoxMesh" id="BoxMesh_theap"]
+size = Vector3(20, 1, 1)
+
+[node name="Node3D" type="Node3D" unique_id=1017030985]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=544675130]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0015201569, 0.005804658, -0.0027832985)
+mesh = SubResource("PlaneMesh_theap")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D" unique_id=1473671820]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D/StaticBody3D" unique_id=2092201948]
+mesh = SubResource("BoxMesh_theap")
