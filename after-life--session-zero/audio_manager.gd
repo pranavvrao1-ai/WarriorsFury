@@ -16,7 +16,8 @@ const MUSIC := {
 const SFX := {
  "footsteps": "res://footsteps/foot steps on land.mp3",
  "gravel": "res://footsteps/footsteps on grovel.mp3",
- "typing": "res://gameathon music/soumages-keyboard-typing-579122.mp3"
+ "typing": "res://gameathon music/soumages-keyboard-typing-579122.mp3",
+ "phone": "res://gameathon music/chrysalyn-corporate-minimalist-mobile-phone-ringtone-562423.mp3"
 }
 const VOICE := {
  "mc": ["res://dialougues/mc/d1.mp3", "res://dialougues/mc/d2.mp3", "res://dialougues/mc/d3.mp3", "res://dialougues/mc/d4.mp3", "res://dialougues/mc/d5.mp3", "res://dialougues/mc/d6.mp3", "res://dialougues/mc/d7.mp3", "res://dialougues/mc/d8.mp3", "res://dialougues/mc/d9.mp3", "res://dialougues/mc/d10.mp3", "res://dialougues/mc/d11.mp3"],
