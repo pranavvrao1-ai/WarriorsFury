@@ -30,10 +30,14 @@ var _was_moving: bool = false
 var _character_anim_time: float = 0.0
 var _headbob_time: float = 0.0
 var _third_person_view: bool = false
+var _health: int = 100
+var _health_label: Label = null
+var _attack_damage: int = 34
 
 var _current_interactable: Dictionary = {}
 
 func _ready() -> void:
+	add_to_group("player_character")
 	_create_hud()
 	_audio = get_node_or_null("../AudioManager")
 	_attach_character_model()
@@ -110,6 +114,13 @@ func _create_hud() -> void:
 	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
 	canvas.add_child(_hud_label)
 
+	_health_label = Label.new()
+	_health_label.position = Vector2(24, 48)
+	_health_label.add_theme_font_size_override("font_size", 18)
+	_health_label.add_theme_color_override("font_color", Color("ff6b75"))
+	_health_label.text = "HP 100 / 100  |  [LMB] Fire"
+	canvas.add_child(_health_label)
+
 	# Interaction prompt in bottom-center
 	_interact_label = Label.new()
 	_interact_label.anchors_preset = Control.PRESET_CENTER_BOTTOM
@@ -144,11 +155,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if _cctv_index == 0:
+		if _cctv_index != 0:
+			_switch_to_cam(0)
+		elif Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			_mouse_captured = true
 		else:
-			_switch_to_cam(0)
+			_perform_attack()
 	elif event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_mouse_captured = false
@@ -173,6 +186,46 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotate_y(-event.relative.x * look_sensitivity)
 		head.rotate_x(-event.relative.y * look_sensitivity)
 		head.rotation.x = clamp(head.rotation.x, -1.4, 1.4)
+
+func take_damage(amount: int) -> void:
+	if is_frozen or _cctv_index != 0:
+		return
+	_health = max(0, _health - amount)
+	_update_health_hud()
+	if _health <= 0:
+		_health = 100
+		global_position = Vector3(0.0, 0.05, 0.0)
+		velocity = Vector3.ZERO
+		_update_health_hud()
+		_show_banner("SYSTEM REBOOT — PLAYER 07 RESTORED")
+
+func _update_health_hud() -> void:
+	if _health_label != null:
+		_health_label.text = "HP %d / 100  |  [LMB] Fire" % _health
+
+func _perform_attack() -> void:
+	if is_frozen or _cctv_index != 0:
+		return
+	var active_camera := get_viewport().get_camera_3d()
+	if active_camera == null:
+		return
+	var origin := active_camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(origin, origin - active_camera.global_basis.z * 35.0)
+	query.collision_mask = 4
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		_show_banner("NO TARGET IN SIGHT")
+		return
+	var target: Node = hit.get("collider") as Node
+	while target != null and not target.is_in_group("simulation_enemy"):
+		target = target.get_parent()
+	if target != null and target.has_method("take_damage"):
+		target.call("take_damage", _attack_damage)
+		_show_banner("SECURITY UNIT HIT")
+	else:
+		_show_banner("TARGET NOT ACQUIRED")
 
 func _set_third_person_view(enabled: bool) -> void:
 	_third_person_view = enabled
