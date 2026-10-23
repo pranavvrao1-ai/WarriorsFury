@@ -1,4 +1,4 @@
-"""Blue 'system alert' windows (ALARM popups) with colour-highlighted words.
+"""Blue 'system alert' windows (NEXUS popups) with colour-highlighted words.
 
 Markup inside text:  {g:green}  {r:red}  {y:yellow}  {c:cyan}  {w:white}
 Example: "{g:PLAYER 07} IDENTIFIED."  ->  [PLAYER 07 IDENTIFIED.]  (brackets added automatically)
@@ -104,7 +104,7 @@ def draw_panel(w, h, alpha=225):
     return panel
 
 
-def draw_system_window(screen, text, title="ALARM", center=(480, 290), width=700,
+def draw_system_window(screen, text, title="NEXUS", center=(480, 290), width=700,
                        progress=1.0, extra_h=0, brackets=True):
     """Draws the window and returns its final rect. progress 0..1 = fade/slide in."""
     rows, rect = layout(text, width, extra_h, center, brackets)

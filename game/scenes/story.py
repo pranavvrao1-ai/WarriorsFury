@@ -181,7 +181,7 @@ class StoryScene(Scene):
         if self.current:
             if self.current["kind"] == "system":
                 p = min(self.open_t / 0.3, 1.0)
-                draw_system_window(screen, self.current["text"], self.current.get("title", "ALARM"),
+                draw_system_window(screen, self.current["text"], self.current.get("title", "NEXUS"),
                                    WINDOW_CENTER, 700, p)
             else:
                 self._draw_textbox(screen, accent)
@@ -216,7 +216,7 @@ class StoryScene(Scene):
 
     def _draw_choice(self, screen):
         p = min(self.open_t / 0.3, 1.0)
-        draw_system_window(screen, self.choice["prompt"], "ALARM", WINDOW_CENTER, 700, p, extra_h=CHOICE_EXTRA)
+        draw_system_window(screen, self.choice["prompt"], "NEXUS", WINDOW_CENTER, 700, p, extra_h=CHOICE_EXTRA)
         if p >= 1.0:
             for i, (opt, r) in enumerate(zip(self.choice["options"], self._choice_rects())):
                 draw_button(screen, r, opt, hot=(i == self.sel or self.choice["auto"]))

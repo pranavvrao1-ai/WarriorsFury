@@ -3,7 +3,7 @@
 Line types:
   narr(text)                     narration
   say(who, text)                 dialogue
-  system(text, title)            blue ALARM window. Colour words: {g:green} {r:red} {y:yellow} {c:cyan}
+  system(text, title)            blue NEXUS window. Colour words: {g:green} {r:red} {y:yellow} {c:cyan}
   fx(name, value)                'flash' | 'glitch' | 'overlay' | 'sound'
   wait(seconds)                  pause
   choice(prompt, options, auto)  button prompt (auto=True -> cursor clicks by itself)
@@ -19,7 +19,7 @@ def say(who, text):
     return {"kind": "say", "who": who, "text": text}
 
 
-def system(text, title="ALARM"):
+def system(text, title="NEXUS"):
     return {"kind": "system", "text": text, "title": title}
 
 

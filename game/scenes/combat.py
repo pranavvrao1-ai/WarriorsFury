@@ -188,9 +188,9 @@ class CombatScene(Scene):
         if self.banner_t > 0 and self.state == "fight":
             elapsed = self.banner_total - self.banner_t
             p = min(elapsed / 0.25, self.banner_t / 0.4, 1.0)
-            draw_system_window(screen, self.banner_text, "ALARM", (WIDTH // 2, HEIGHT // 2 - 70), progress=p)
+            draw_system_window(screen, self.banner_text, "NEXUS", (WIDTH // 2, HEIGHT // 2 - 70), progress=p)
         if self.state == "won":
-            draw_system_window(screen, "STAGE {y:CLEARED}", "ALARM", (WIDTH // 2, HEIGHT // 2 - 40))
+            draw_system_window(screen, "STAGE {y:CLEARED}", "NEXUS", (WIDTH // 2, HEIGHT // 2 - 40))
         if self.state == "dead":
             veil = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
             veil.fill((0, 0, 0, 170))
