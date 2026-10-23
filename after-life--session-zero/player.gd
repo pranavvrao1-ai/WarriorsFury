@@ -27,6 +27,7 @@ var _walk_anim: StringName = &""
 var _run_anim: StringName = &""
 var _was_moving: bool = false
 var _character_anim_time: float = 0.0
+var _headbob_time: float = 0.0
 
 var _current_interactable: Dictionary = {}
 
@@ -49,6 +50,10 @@ func _attach_character_model() -> void:
 		push_warning("Player model root is not Node3D.")
 		return
 	_character_visual.name = "PlayerCharacterVisual"
+	# This build is first-person: keep the full-body visual hidden from the gameplay camera.
+	# The imported GLB remains instantiated for animation hooks and can be enabled for third-person later.
+	_character_visual.visible = false
+	_character_visual.position = Vector3.ZERO
 	add_child(_character_visual)
 	_play_idle_animation(_character_visual)
 
@@ -258,6 +263,9 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
+	# Small, restrained head bob adds motion without allowing the camera to clip through the player mesh.
+	_headbob_time += delta * (12.0 if moving_now else 2.0)
+	head.position.y = 1.65 + (sin(_headbob_time) * (0.025 if moving_now else 0.006))
 	if moving_now and _audio != null and _audio.has_method("play_footstep"):
 		_audio.play_footstep()
 	_was_moving = moving_now
