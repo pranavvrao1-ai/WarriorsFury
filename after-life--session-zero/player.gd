@@ -21,6 +21,10 @@ var _banner_timer: float = 0.0
 var _rec_time: float = 0.0
 var _audio: Node = null
 var _character_visual: Node3D = null
+var _model_animator: AnimationPlayer = null
+var _idle_anim: StringName = &""
+var _walk_anim: StringName = &""
+var _run_anim: StringName = &""
 var _was_moving: bool = false
 
 var _current_interactable: Dictionary = {}
@@ -48,14 +52,29 @@ func _attach_character_model() -> void:
 	_play_idle_animation(_character_visual)
 
 func _play_idle_animation(root: Node) -> void:
-	if root is AnimationPlayer:
-		var animation_player := root as AnimationPlayer
-		for animation_name in animation_player.get_animation_list():
-			if String(animation_name).to_lower().contains("idle"):
-				animation_player.play(animation_name)
-				return
+	if root is AnimationPlayer and _model_animator == null:
+		_model_animator = root as AnimationPlayer
+		for animation_name in _model_animator.get_animation_list():
+			var lower_name := String(animation_name).to_lower()
+			if _idle_anim == &"" and lower_name.contains("idle"):
+				_idle_anim = StringName(animation_name)
+			elif _walk_anim == &"" and (lower_name.contains("walk") or lower_name.contains("run")):
+				_walk_anim = StringName(animation_name)
+			if _run_anim == &"" and lower_name.contains("run"):
+				_run_anim = StringName(animation_name)
 	for child in root.get_children():
 		_play_idle_animation(child)
+	if root == _character_visual:
+		_update_character_animation(false)
+
+func _update_character_animation(moving: bool) -> void:
+	if _model_animator == null:
+		return
+	var target: StringName = _idle_anim
+	if moving:
+		target = _run_anim if Input.is_key_pressed(KEY_SHIFT) and _run_anim != &"" else _walk_anim
+	if target != &"" and _model_animator.current_animation != target:
+		_model_animator.play(target)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -206,6 +225,7 @@ func _physics_process(delta: float) -> void:
 	if moving_now and not _was_moving and _audio != null and _audio.has_method("play_footstep"):
 		_audio.play_footstep()
 	_was_moving = moving_now
+	_update_character_animation(moving_now)
 		return
 
 	# --- SOLID WALKING PHYSICS (NO FLYING) ---
