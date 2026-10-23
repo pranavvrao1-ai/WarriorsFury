@@ -1,4 +1,5 @@
 import math
+import random
 import pygame
 
 from game.scenes.base import Scene
@@ -27,11 +28,12 @@ class StoryScene(Scene):
 
     CPS = 55  # typewriter characters per second
 
-    def __init__(self, game, lines, theme="sim", on_done=None):
+    def __init__(self, game, lines, theme="sim", on_done=None, music="cyber"):
         super().__init__(game)
         self.lines = lines
         self.theme = theme
         self.on_done = on_done
+        self.music = music
         self.i = -1
         self.current = None
         self.chars = 0.0
@@ -39,6 +41,8 @@ class StoryScene(Scene):
         self.wait = 0.0
         self.flash = 0.0
         self.glitch = 0.0
+        self.shake_t = 0.0
+        self.shake_amp = 0
         self.overlay = None
         self.caption = None  # (text, time_left)
         self.choice = None
@@ -47,6 +51,9 @@ class StoryScene(Scene):
         self.cursor = pygame.Vector2(WIDTH - 60, 40)
         self.t = 0.0
         self.finished = False
+
+        # Ensure background music starts playing immediately
+        audio.play_music(self.music)
         self._next()
 
     # ---------- flow ----------
@@ -91,8 +98,15 @@ class StoryScene(Scene):
             self.flash = 1.0
             audio.play_sfx("flash")
         elif name == "glitch":
-            self.glitch = value if value else 0.6
+            self.glitch = value if value else 0.8
             audio.play_sfx("glitch")
+        elif name == "shake":
+            self.shake_t = 0.45
+            self.shake_amp = int(value if value else 12)
+        elif name == "heartbeat":
+            audio.play_sfx("heartbeat")
+            self.shake_t = 0.25
+            self.shake_amp = 8
         elif name == "overlay":
             self.overlay = value
         elif name == "phone_ring":
@@ -182,6 +196,11 @@ class StoryScene(Scene):
         self.open_t += dt
         self.flash = max(0.0, self.flash - dt * 1.2)
         self.glitch = max(0.0, self.glitch - dt)
+        self.shake_t = max(0.0, self.shake_t - dt)
+
+        # Ensure background music keeps playing continuously
+        audio.ensure_music(self.music)
+
         if self.caption:
             text, left = self.caption
             left -= dt
@@ -204,61 +223,74 @@ class StoryScene(Scene):
     # ---------- draw ----------
     def draw(self, screen):
         accent = THEMES[self.theme]["accent"]
-        screen.blit(get_background(self.theme), (0, 0))
-        self._draw_overlay(screen, accent)
+
+        # Screen shake offset
+        ox, oy = 0, 0
+        if self.shake_t > 0:
+            ox = random.randint(-self.shake_amp, self.shake_amp)
+            oy = random.randint(-self.shake_amp, self.shake_amp)
+
+        shake_surf = pygame.Surface((WIDTH, HEIGHT))
+        shake_surf.blit(get_background(self.theme), (0, 0))
+
+        self._draw_overlay(shake_surf, accent)
 
         if self.caption:
             text, left = self.caption
-            draw_text(screen, text, get_font(18), GREY, (WIDTH // 2, 40), center=True, alpha=int(255 * min(left, 1)))
+            draw_text(shake_surf, text, get_font(18), GREY, (WIDTH // 2, 40), center=True, alpha=int(255 * min(left, 1)))
 
         if self.current:
             if self.current["kind"] == "system":
                 p = min(self.open_t / 0.3, 1.0)
-                draw_system_window(screen, self.current["text"], self.current.get("title", "NEXUS"),
+                draw_system_window(shake_surf, self.current["text"], self.current.get("title", "NEXUS"),
                                    WINDOW_CENTER, 700, p)
             else:
-                self._draw_textbox(screen, accent)
+                self._draw_textbox(shake_surf, accent)
+
         if self.choice:
-            self._draw_choice(screen)
+            self._draw_choice(shake_surf)
 
         if self.glitch > 0:
-            apply_glitch(screen, int(6 + 20 * self.glitch))
-        draw_scanlines(screen)
-        draw_flash(screen, self.flash)
+            apply_glitch(shake_surf, int(6 + 24 * self.glitch))
+        draw_scanlines(shake_surf)
+        draw_flash(shake_surf, self.flash)
+
+        # Blit shaken surface to real screen
+        screen.blit(shake_surf, (ox, oy))
 
     def _draw_textbox(self, screen, accent):
         line = self.current
         is_dialogue = (line["kind"] == "say")
 
         box = pygame.Rect(40, HEIGHT - 190, WIDTH - 80, 160)
-        screen.blit(draw_panel(box.w, box.h, 232), box.topleft)
+        screen.blit(draw_panel(box.w, box.h, 235), box.topleft)
 
-        y = box.y + 18
+        y = box.y + 16
 
         if is_dialogue:
             who = line["who"]
             color = SPEAKER_COLORS.get(who, WHITE)
 
-            # Character portrait badge
+            # Character portrait badge from uploaded 3D assets
             portrait_surf = portraits.get_portrait(who, self.theme, self.t)
-            screen.blit(portrait_surf, (box.x + 18, box.y + 24))
+            screen.blit(portrait_surf, (box.x + 16, box.y + 20))
 
-            text_x = box.x + 148
-            wrap_w = box.width - 168
+            text_x = box.x + 154
+            wrap_w = box.width - 176
 
             # Speaker Name
             draw_text(screen, who, get_font(22, True), color, (text_x, y))
 
             # Sub-tag / ID
             tag = SPEAKER_TAGS.get(who, "SYSTEM")
-            draw_text(screen, tag, get_font(13), GREY, (text_x + 180, y + 4))
+            draw_text(screen, tag, get_font(13), GREY, (text_x + 185, y + 4))
 
             # Live speaking waveform meter
             voice_active = audio.is_voice_playing() or (self.chars < len(line["text"]))
             portraits.draw_speaking_wave(screen, box.right - 140, y + 2, 90, 20, self.t, color, active=voice_active)
 
             y += 34
-            font = get_font(22)
+            font = get_font(21)
             remaining = int(self.chars)
             for row in wrap_text(line["text"], font, wrap_w):
                 if remaining <= 0:
@@ -294,36 +326,69 @@ class StoryScene(Scene):
 
     def _draw_overlay(self, screen, accent):
         o = self.overlay
+        if not o:
+            return
+
         if o in ("receipt", "receipt_back"):
-            paper = pygame.Rect(WIDTH // 2 - 160, 40, 320, 300)
-            pygame.draw.rect(screen, (232, 226, 205), paper)
-            pygame.draw.rect(screen, (150, 140, 110), paper, 3)
-            f = get_font(16, True)
+            # Weathered crumpled receipt paper
+            paper = pygame.Rect(WIDTH // 2 - 165, 35, 330, 310)
+            pygame.draw.rect(screen, (235, 228, 206), paper, border_radius=4)
+            pygame.draw.rect(screen, (160, 145, 115), paper, 3, border_radius=4)
+            # Coffee stain / water damage ring
+            pygame.draw.circle(screen, (215, 205, 180), (paper.right - 60, paper.y + 70), 38, 5)
+
             if o == "receipt":
-                rows = [
-                    ("AFTERLIFE GAMING LOUNGE", 70),
-                    ("ENTRY: 11:47 PM", 120),
-                    ("STATION: 07", 150),
-                    ("PLAYER 07 —", 240),
-                    ("SESSION STATUS: INCOMPLETE", 265)
-                ]
-                for text, y in rows:
-                    draw_text(screen, text, f, (40, 35, 30), (paper.centerx, paper.y + y - 40), center=True)
+                f_bold = get_font(18, True)
+                f_norm = get_font(15)
+                draw_text(screen, "AFTERLIFE GAMING LOUNGE", f_bold, (35, 30, 25), (paper.centerx, paper.y + 35), center=True)
+                draw_text(screen, "=============================", f_norm, (110, 100, 85), (paper.centerx, paper.y + 60), center=True)
+                draw_text(screen, "DATE: 23 OCT 2026   11:47 PM", f_norm, (45, 40, 35), (paper.centerx, paper.y + 90), center=True)
+                draw_text(screen, "STATION: TERMINAL 07", f_norm, (45, 40, 35), (paper.centerx, paper.y + 120), center=True)
+                draw_text(screen, "GAME: WARRIOR'S FURY", f_norm, (45, 40, 35), (paper.centerx, paper.y + 150), center=True)
+                draw_text(screen, "=============================", f_norm, (110, 100, 85), (paper.centerx, paper.y + 185), center=True)
+                draw_text(screen, "PLAYER 07 —", get_font(16, True), (180, 30, 30), (paper.centerx, paper.y + 225), center=True)
+                draw_text(screen, "SESSION STATUS: INCOMPLETE", get_font(16, True), (180, 30, 30), (paper.centerx, paper.y + 255), center=True)
             else:
-                draw_text(screen, "YOU WOKE UP", get_font(30, True), (170, 20, 30), (paper.centerx, paper.centery - 20), center=True)
-                draw_text(screen, "TOO EARLY.", get_font(30, True), (170, 20, 30), (paper.centerx, paper.centery + 20), center=True)
+                # Creepy handwritten red scrawl on the back
+                draw_text(screen, "YOU WOKE UP", get_font(34, True), (180, 15, 25), (paper.centerx, paper.centery - 26), center=True)
+                draw_text(screen, "TOO EARLY.", get_font(34, True), (180, 15, 25), (paper.centerx, paper.centery + 24), center=True)
+                # Blood-red exclamation underline
+                pygame.draw.line(screen, (180, 15, 25), (paper.centerx - 90, paper.centery + 50), (paper.centerx + 90, paper.centery + 50), 3)
+
+        elif o == "phone_screen":
+            # Black smartphone bezel reflecting the dark room
+            phone = pygame.Rect(WIDTH // 2 - 120, 25, 240, 320)
+            pygame.draw.rect(screen, (8, 10, 15), phone, border_radius=24)
+            pygame.draw.rect(screen, (60, 65, 80), phone, 3, border_radius=24)
+            # Glass reflection glint
+            pygame.draw.line(screen, (255, 255, 255, 30), (phone.x + 30, phone.y + 10), (phone.right - 10, phone.bottom - 40), 2)
+            draw_text(screen, "CALL ENDED", get_font(14), (120, 125, 140), (phone.centerx, phone.centery), center=True)
+
         elif o == "eyes":
-            pulse = 0.6 + 0.4 * math.sin(self.t * 6)
-            for ex in (WIDTH // 2 - 60, WIDTH // 2 + 60):
-                for r, a in ((46, 30), (32, 60), (20, 130)):
+            # Dramatic glowing blue cybernetic eyes shining from the reflection
+            pulse = 0.7 + 0.3 * math.sin(self.t * 8)
+            eye_y = 175
+            for ex in (WIDTH // 2 - 55, WIDTH // 2 + 55):
+                # Multiple radiating glow halos
+                for r, a in ((60, 25), (42, 55), (28, 100), (16, 180)):
                     glow = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-                    pygame.draw.circle(glow, (0, 180, 255, int(a * pulse)), (r, r), r)
-                    screen.blit(glow, (ex - r, 190 - r))
-                pygame.draw.circle(screen, (200, 245, 255), (ex, 190), 9)
+                    pygame.draw.circle(glow, (0, 200, 255, int(a * pulse)), (r, r), r)
+                    screen.blit(glow, (ex - r, eye_y - r))
+                # Iris ring and bright white pupil
+                pygame.draw.circle(screen, (0, 230, 255), (ex, eye_y), 11, 2)
+                pygame.draw.circle(screen, (230, 250, 255), (ex, eye_y), 7)
+                pygame.draw.circle(screen, (255, 255, 255), (ex, eye_y), 3)
+
         elif o == "monitor":
-            m = pygame.Rect(WIDTH // 2 - 150, 22, 300, 140)
-            pygame.draw.rect(screen, (10, 18, 40), m, border_radius=6)
-            pygame.draw.rect(screen, accent, m, 3, border_radius=6)
-            draw_text(screen, "WARRIOR'S FURY", get_font(22, True), accent, (m.centerx, m.centery - 12), center=True)
-            draw_text(screen, "SESSION 002", get_font(18), WHITE, (m.centerx, m.centery + 16), center=True)
-            pygame.draw.rect(screen, (30, 30, 40), (WIDTH // 2 - 40, 168, 80, 12))
+            # Dark room monitor illuminating empty chair
+            m = pygame.Rect(WIDTH // 2 - 160, 20, 320, 150)
+            pygame.draw.rect(screen, (8, 14, 30), m, border_radius=8)
+            pygame.draw.rect(screen, (0, 230, 255), m, 3, border_radius=8)
+            # Stand
+            pygame.draw.rect(screen, (25, 30, 40), (WIDTH // 2 - 35, 170, 70, 15))
+            pygame.draw.rect(screen, (15, 20, 30), (WIDTH // 2 - 60, 185, 120, 8))
+            draw_text(screen, "WARRIOR'S FURY", get_font(24, True), (0, 230, 255), (m.centerx, m.centery - 14), center=True)
+            draw_text(screen, "SESSION 002", get_font(19, True), WHITE, (m.centerx, m.centery + 18), center=True)
+
+        elif o == "blackout":
+            screen.fill((0, 0, 0))

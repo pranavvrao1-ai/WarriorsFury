@@ -44,15 +44,14 @@ class AudioManager:
     def _index_music(self):
         if not MUSIC_DIR.exists():
             return
-        # Map friendly keys to files
         for f in MUSIC_DIR.glob("*.mp3"):
             fname = f.name.lower()
-            if "drone-ambient" in fname:
-                self._music_tracks["drone"] = f
-                self._music_tracks["cafe"] = f
-            elif "cyber-crime" in fname:
+            if "cyber-crime" in fname:
                 self._music_tracks["cyber"] = f
                 self._music_tracks["combat"] = f
+            elif "drone-ambient" in fname:
+                self._music_tracks["drone"] = f
+                self._music_tracks["cafe"] = f
             elif "final-countdown" in fname:
                 self._music_tracks["boss"] = f
                 self._music_tracks["final"] = f
@@ -75,7 +74,7 @@ class AudioManager:
                 self._sound_cache["typing_short"] = f
 
     def _generate_synth_sfx(self):
-        """Pre-generate procedural sci-fi audio effects for combat."""
+        """Procedural sci-fi and dramatic audio effects."""
         if not self.initialized:
             return
         try:
@@ -89,6 +88,22 @@ class AudioManager:
             self._sound_cache["flash"] = self._create_synth(1200, 300, 0.25, 0.25, wave="sine")
             self._sound_cache["click"] = self._create_synth(900, 1100, 0.05, 0.15, wave="sine")
             self._sound_cache["stage_clear"] = self._create_synth(440, 880, 0.4, 0.3, wave="sine")
+
+            # Dramatic Heartbeat double-thump
+            sample_rate = 44100
+            duration = 0.5
+            n_samples = int(sample_rate * duration)
+            buf = array.array("h")
+            for i in range(n_samples):
+                t = i / sample_rate
+                env1 = math.exp(-25 * t) if t < 0.16 else 0
+                env2 = math.exp(-25 * (t - 0.18)) if t >= 0.18 else 0
+                val = int(32767 * 0.75 * (env1 * math.sin(2 * math.pi * 55 * t) + env2 * math.sin(2 * math.pi * 65 * t)))
+                val = max(-32768, min(32767, val))
+                buf.append(val)
+                buf.append(val)
+            self._sound_cache["heartbeat"] = pygame.mixer.Sound(buf)
+
         except Exception as e:
             print(f"[Audio] Error creating synth sfx: {e}")
 
@@ -117,23 +132,30 @@ class AudioManager:
         return pygame.mixer.Sound(buf)
 
     # ---------- Music ----------
-    def play_music(self, track_name, loop=-1, fade_ms=600):
+    def play_music(self, track_name, loop=-1, fade_ms=400):
         if not self.initialized or self.muted:
             return
-        if self.current_music == track_name:
+        if self.current_music == track_name and pygame.mixer.music.get_busy():
             return
         path = self._music_tracks.get(track_name)
         if not path or not path.exists():
             return
         try:
-            pygame.mixer.music.set_volume(0.5)
+            pygame.mixer.music.set_volume(0.55)
             pygame.mixer.music.load(str(path))
             pygame.mixer.music.play(loops=loop, fade_ms=fade_ms)
             self.current_music = track_name
         except Exception as e:
             print(f"[Audio] play_music error: {e}")
 
-    def stop_music(self, fade_ms=600):
+    def ensure_music(self, track_name="cyber"):
+        """Ensures background music is playing; starts it if silent."""
+        if not self.initialized or self.muted:
+            return
+        if not pygame.mixer.music.get_busy():
+            self.play_music(track_name)
+
+    def stop_music(self, fade_ms=400):
         if not self.initialized:
             return
         try:
@@ -155,7 +177,7 @@ class AudioManager:
             sound = self._sound_cache.get(str(voice_file))
             if sound is None:
                 sound = pygame.mixer.Sound(str(voice_file))
-                sound.set_volume(0.9)
+                sound.set_volume(0.95)
                 self._sound_cache[str(voice_file)] = sound
             if self.voice_channel:
                 self.voice_channel.stop()
@@ -182,7 +204,7 @@ class AudioManager:
             s = self._sound_cache.get(name)
             if isinstance(s, Path) and s.exists():
                 snd = pygame.mixer.Sound(str(s))
-                snd.set_volume(0.6)
+                snd.set_volume(0.65)
                 self._sound_cache[name] = snd
                 snd.play()
             elif isinstance(s, pygame.mixer.Sound):

@@ -26,6 +26,18 @@ STEPS = [
     ("story", "post", "dark"),
 ]
 
+STORY_MUSIC = {
+    "act1": "cyber",
+    "act2_intro": "cyber",
+    "memory1": "cyber",
+    "memory2": "cyber",
+    "nexus": "tension",
+    "collapse": "tension",
+    "act3": "cyber",
+    "act4": "fear",
+    "post": "cyber",
+}
+
 
 def start_title(game):
     game.to_title = lambda: start_title(game)
@@ -95,23 +107,9 @@ def run_step(game, index):
         return
 
     kind, arg, theme = STEPS[index]
+    music = STORY_MUSIC.get(arg, "cyber") if kind == "story" else ("boss" if arg == 2 else "cyber")
 
-    if kind == "story":
-        if arg == "act1":
-            audio.play_music("cafe")
-        elif arg == "act2_intro":
-            audio.play_music("cyber")
-        elif arg in ("nexus", "collapse"):
-            audio.play_music("tension")
-        elif arg == "act3":
-            audio.play_music("awakening")
-        elif arg == "act4":
-            audio.play_music("fear")
-        elif arg == "post":
-            audio.play_music("drone")
-
-    elif kind == "combat":
-        audio.play_music("boss" if arg == 2 else "cyber")
+    audio.play_music(music)
 
     def done():
         print("Completed:", kind, arg)
@@ -119,7 +117,7 @@ def run_step(game, index):
         if kind == "combat":
             if arg == 2:
                 # Stage 3 Boss (NEXUS) defeated!
-                # Do NOT show a shop/replay menu — immediately trigger the simulation collapse & twist ending!
+                # Advance directly into collapse & twist ending
                 run_step(game, index + 1)
             else:
                 show_level_choice(game, index + 1, arg)
@@ -128,7 +126,7 @@ def run_step(game, index):
 
     if kind == "story":
         game.set_scene(
-            StoryScene(game, STORY[arg], theme, done)
+            StoryScene(game, STORY[arg], theme, done, music=music)
         )
     elif kind == "combat":
         game.set_scene(
