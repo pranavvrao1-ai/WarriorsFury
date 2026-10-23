@@ -258,7 +258,7 @@ func _physics_process(delta: float) -> void:
 
 	move_and_slide()
 	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
-	if moving_now and not _was_moving and _audio != null and _audio.has_method("play_footstep"):
+	if moving_now and _audio != null and _audio.has_method("play_footstep"):
 		_audio.play_footstep()
 	_was_moving = moving_now
 	_update_character_animation(moving_now)
