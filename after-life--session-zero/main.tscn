@@ -1,8 +1,9 @@
-[gd_scene load_steps=9 format=3 uid="uid://vn2ms7ng00tx"]
+[gd_scene load_steps=10 format=3 uid="uid://vn2ms7ng00tx"]
 
-[ext_resource type="Script" path="res://afterlife_room.gd" id="1_room"]
-[ext_resource type="Script" path="res://player.gd" id="2_player"]
-[ext_resource type="Script" path="res://story_manager.gd" id="3_story"]
+[ext_resource type="Script" path="res://after-life--session-zero/afterlife_room.gd" id="1_room"]
+[ext_resource type="Script" path="res://after-life--session-zero/player.gd" id="2_player"]
+[ext_resource type="Script" path="res://after-life--session-zero/story_manager.gd" id="3_story"]
+[ext_resource type="Script" path="res://after-life--session-zero/audio_manager.gd" id="4_audio"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_theap"]
 size = Vector2(85, 85)
@@ -36,7 +37,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
 shape = SubResource("BoxShape3D_floor")
 
 [node name="Player" type="CharacterBody3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 33)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 15)
 collision_layer = 3
 collision_mask = 3
 script = ExtResource("2_player")
@@ -50,6 +51,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
 
 [node name="Camera3D" type="Camera3D" parent="Player/Head"]
 current = true
+
+[node name="ThirdPersonCamera" type="Camera3D" parent="Player/Head"]
+position = Vector3(0, 0.1, 4.2)
+rotation = Vector3(-0.12, 0, 0)
+fov = 75.0
+near = 0.08
+far = 400.0
 
 [node name="StoryManager" type="Node" parent="."]
 script = ExtResource("3_story")
@@ -77,3 +85,6 @@ collision_mask = 3
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerZone_ExitCafe"]
 shape = SubResource("BoxShape3D_exit")
+
+[node name="AudioManager" type="Node" parent="."]
+script = ExtResource("4_audio")

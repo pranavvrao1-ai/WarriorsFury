@@ -40,9 +40,13 @@ var terminal07_chat_step: int = 0
 var _exit_triggered: bool = false
 var _nexus_confronted: bool = false
 var phone_step: int = 0
+var _audio: Node = null
 
 func _ready() -> void:
 	_setup_ui()
+	_audio = room_root.get_node_or_null("AudioManager")
+	if _audio != null and _audio.has_method("play_music"):
+		_audio.play_music("suspense")
 	call_deferred("_init_story")
 
 func _init_story() -> void:
@@ -69,9 +73,14 @@ func _on_zone_terminal07_entered(body: Node3D) -> void:
 			call_deferred("launch_terminal07")
 
 func _on_zone_nexus_entered(body: Node3D) -> void:
-	if body == player and current_act == Act.ACT2_SIMULATION and not _nexus_confronted:
-		_nexus_confronted = true
-		call_deferred("on_nexus_stage_confrontation")
+	if body != player or current_act != Act.ACT2_SIMULATION or _nexus_confronted:
+		return
+	var remaining := int(room_root.call("get_needen_enemy_count")) if room_root != null and room_root.has_method("get_needen_enemy_count") else 0
+	if remaining > 0:
+		show_banner_story("NEXUS CORE LOCKED — NEUTRALIZE %d SECURITY UNITS FIRST" % remaining)
+		return
+	_nexus_confronted = true
+	call_deferred("on_nexus_stage_confrontation")
 
 func _on_zone_exit_entered(body: Node3D) -> void:
 	if body == player and current_act == Act.ACT3_AWAKENING and not _exit_triggered:
@@ -412,7 +421,7 @@ func set_act(new_act: Act) -> void:
 func _start_act_1() -> void:
 	if player:
 		player.is_frozen = false
-		player.global_position = Vector3(0, 0.05, 30.0)
+		player.global_position = Vector3(0, 0.05, 15.0)
 	show_banner_story("ACT I: 11:47 PM — Find Terminal #07 inside Afterlife Gaming Lounge")
 	call_deferred("_override_terminal07_for_act1")
 
@@ -421,6 +430,11 @@ func _override_terminal07_for_act1() -> void:
 		room_root.override_interactable_callback("Terminal #07", Callable(self, "launch_terminal07"))
 
 func launch_terminal07() -> void:
+	if _audio != null:
+		if _audio.has_method("play_music"):
+			_audio.play_music("tension")
+		if _audio.has_method("play_sfx"):
+			_audio.play_sfx("typing")
 	if player:
 		player.is_frozen = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -471,12 +485,14 @@ func _on_terminal07_advance() -> void:
 # --- ACT II: NEO-EDEN 2189 - THE SIMULATION ---
 # ==============================================================================
 func _start_act_2() -> void:
+	if _audio != null and _audio.has_method("play_music"):
+		_audio.play_music("cyber")
 	_nexus_confronted = false
 	if player:
 		player.is_frozen = false
 		player.global_position = Vector3(0, 0.05, 0.0)
-	show_dialog("NEXUS [AI CONSTRUCT]", "Welcome to Neo-Eden, Player 07. Clear the simulation stages to find your exit.", func():
-		show_banner_story("ACT II: THE SIMULATION (2189) — Confront NEXUS Core on the Arena Stage")
+	show_dialog("NEXUS [AI CONSTRUCT]", "Welcome to Neo-Eden, Player 07. Neutralize all three security units, then approach the Nexus Core.", func():
+		show_banner_story("ACT II: Use the mouse to aim and left-click to fire. Clear 3 security units, then approach NEXUS.")
 	)
 
 func on_nexus_stage_confrontation() -> void:
@@ -499,6 +515,8 @@ func on_nexus_stage_confrontation() -> void:
 # --- ACT III: 6:13 AM - THE AWAKENING ---
 # ==============================================================================
 func _start_act_3() -> void:
+	if _audio != null and _audio.has_method("play_music"):
+		_audio.play_music("awakening")
 	_exit_triggered = false
 	if player:
 		player.is_frozen = false
@@ -534,6 +552,8 @@ func on_player_exited_cafe_act3() -> void:
 # --- ACT IV: THE CAFÉ THAT NEVER EXISTED (NEXT AFTERNOON) ---
 # ==============================================================================
 func _start_act_4() -> void:
+	if _audio != null and _audio.has_method("play_music"):
+		_audio.play_music("fear")
 	if player:
 		player.is_frozen = false
 		player.global_position = Vector3(0, 0.05, 32.0)
@@ -578,6 +598,8 @@ func _close_receipt() -> void:
 
 func _trigger_phone_call() -> void:
 	phone_step = 0
+	if _audio != null and _audio.has_method("play_sfx"):
+		_audio.play_sfx("phone")
 	if player:
 		player.is_frozen = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -621,6 +643,8 @@ func _on_phone_answer_pressed() -> void:
 # --- POST CREDITS SCENE ---
 # ==============================================================================
 func _start_post_credits() -> void:
+	if _audio != null and _audio.has_method("play_music"):
+		_audio.play_music("tension")
 	if player:
 		player.is_frozen = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -653,6 +677,8 @@ func _advance_dialog() -> void:
 
 	var current: Dictionary = active_dialog_queue.pop_front()
 	dialog_speaker.text = str(current.get("speaker", ""))
+	if _audio != null and _audio.has_method("play_voice_for_speaker"):
+		_audio.play_voice_for_speaker(str(current.get("speaker", "")))
 	dialog_text.text = str(current.get("text", ""))
 
 func _unhandled_input(event: InputEvent) -> void:

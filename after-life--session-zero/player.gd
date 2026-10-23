@@ -9,6 +9,7 @@ var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity", 9
 
 @onready var head: Node3D = $Head
 @onready var camera: Camera3D = $Head/Camera3D
+@onready var third_person_camera: Camera3D = $Head/ThirdPersonCamera
 
 var is_frozen: bool = false
 var _mouse_captured: bool = false
@@ -19,11 +20,87 @@ var _interact_label: Label = null
 var _banner_label: Label = null
 var _banner_timer: float = 0.0
 var _rec_time: float = 0.0
+var _audio: Node = null
+var _character_visual: Node3D = null
+var _model_animator: AnimationPlayer = null
+var _idle_anim: StringName = &""
+var _walk_anim: StringName = &""
+var _run_anim: StringName = &""
+var _was_moving: bool = false
+var _character_anim_time: float = 0.0
+var _headbob_time: float = 0.0
+var _third_person_view: bool = false
+var _health: int = 100
+var _health_label: Label = null
+var _attack_damage: int = 34
+var _invulnerability_timer: float = 0.0
 
 var _current_interactable: Dictionary = {}
 
 func _ready() -> void:
+	add_to_group("player_character")
 	_create_hud()
+	_audio = get_node_or_null("../AudioManager")
+	_attach_character_model()
+
+func _attach_character_model() -> void:
+	var model_path := "res://characters/male3.glb"
+	if not ResourceLoader.exists(model_path):
+		push_warning("Player model missing: " + model_path)
+		return
+	var packed := load(model_path) as PackedScene
+	if packed == null:
+		push_warning("Player model could not be imported as a scene: " + model_path)
+		return
+	_character_visual = packed.instantiate() as Node3D
+	if _character_visual == null:
+		push_warning("Player model root is not Node3D.")
+		return
+	_character_visual.name = "PlayerCharacterVisual"
+	# This build is first-person: keep the full-body visual hidden from the gameplay camera.
+	# The imported GLB remains instantiated for animation hooks and can be enabled for third-person later.
+	_character_visual.visible = _third_person_view
+	_character_visual.position = Vector3.ZERO
+	add_child(_character_visual)
+	_play_idle_animation(_character_visual)
+
+func _play_idle_animation(root: Node) -> void:
+	if root is AnimationPlayer and _model_animator == null:
+		var candidate := root as AnimationPlayer
+		if not candidate.get_animation_list().is_empty():
+			_model_animator = candidate
+			for animation_name in _model_animator.get_animation_list():
+				var lower_name := String(animation_name).to_lower()
+				if _idle_anim == &"" and lower_name.contains("idle"):
+					_idle_anim = StringName(animation_name)
+				elif _walk_anim == &"" and (lower_name.contains("walk") or lower_name.contains("run")):
+					_walk_anim = StringName(animation_name)
+				if _run_anim == &"" and lower_name.contains("run"):
+					_run_anim = StringName(animation_name)
+			if _idle_anim == &"" and _walk_anim == &"" and _run_anim == &"":
+				_model_animator = null
+	for child in root.get_children():
+		_play_idle_animation(child)
+	if root == _character_visual:
+		_update_character_animation(false)
+
+func _update_character_animation(moving: bool) -> void:
+	if _model_animator != null:
+		var target: StringName = _idle_anim
+		if moving:
+			target = _run_anim if Input.is_key_pressed(KEY_SHIFT) and _run_anim != &"" else _walk_anim
+		if target != &"" and _model_animator.current_animation != target:
+			_model_animator.play(target)
+		return
+
+	# The bundled player GLB is rigged but contains no animation clips.
+	# Keep the character alive with a lightweight procedural idle/walk cycle.
+	if _character_visual != null:
+		var speed := 11.0 if moving else 1.7
+		var bob := 0.035 if moving else 0.008
+		_character_visual.position.y = sin(_character_anim_time * speed) * bob
+		_character_visual.rotation.x = -0.035 if moving else 0.0
+		_character_visual.rotation.z = sin(_character_anim_time * speed * 0.5) * (0.025 if moving else 0.005)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -35,8 +112,15 @@ func _create_hud() -> void:
 	_hud_label.position = Vector2(24, 20)
 	_hud_label.add_theme_font_size_override("font_size", 16)
 	_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
-	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
+	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
 	canvas.add_child(_hud_label)
+
+	_health_label = Label.new()
+	_health_label.position = Vector2(24, 48)
+	_health_label.add_theme_font_size_override("font_size", 18)
+	_health_label.add_theme_color_override("font_color", Color("ff6b75"))
+	_health_label.text = "HP 100 / 100  |  [LMB] Fire"
+	canvas.add_child(_health_label)
 
 	# Interaction prompt in bottom-center
 	_interact_label = Label.new()
@@ -72,11 +156,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if _cctv_index == 0:
+		if _cctv_index != 0:
+			_switch_to_cam(0)
+		elif Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			_mouse_captured = true
 		else:
-			_switch_to_cam(0)
+			_perform_attack()
 	elif event is InputEventKey and event.keycode == KEY_ESCAPE and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 		_mouse_captured = false
@@ -95,10 +181,67 @@ func _unhandled_input(event: InputEvent) -> void:
 			_switch_to_cam(0)
 		elif event.keycode == KEY_E and _cctv_index == 0:
 			_try_interact()
+		elif event.keycode == KEY_V and _cctv_index == 0:
+			_set_third_person_view(not _third_person_view)
 	elif event is InputEventMouseMotion and _mouse_captured and _cctv_index == 0:
 		rotate_y(-event.relative.x * look_sensitivity)
 		head.rotate_x(-event.relative.y * look_sensitivity)
 		head.rotation.x = clamp(head.rotation.x, -1.4, 1.4)
+
+func take_damage(amount: int) -> void:
+	if is_frozen or _cctv_index != 0 or _invulnerability_timer > 0.0:
+		return
+	_health = max(0, _health - amount)
+	_update_health_hud()
+	if _health <= 0:
+		_health = 100
+		_invulnerability_timer = 2.5
+		global_position = Vector3(0.0, 0.05, 5.0)
+		velocity = Vector3.ZERO
+		_update_health_hud()
+		_show_banner("SYSTEM REBOOT — PLAYER 07 RESTORED")
+
+func _update_health_hud() -> void:
+	if _health_label != null:
+		_health_label.text = "HP %d / 100  |  [LMB] Fire" % _health
+
+func _perform_attack() -> void:
+	if is_frozen or _cctv_index != 0:
+		return
+	var active_camera := get_viewport().get_camera_3d()
+	if active_camera == null:
+		return
+	var origin := active_camera.global_position
+	var query := PhysicsRayQueryParameters3D.create(origin, origin - active_camera.global_basis.z * 35.0)
+	query.collision_mask = 4
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		_show_banner("NO TARGET IN SIGHT")
+		return
+	var target: Node = hit.get("collider") as Node
+	while target != null and not target.is_in_group("simulation_enemy"):
+		target = target.get_parent()
+	if target != null and target.has_method("take_damage"):
+		target.call("take_damage", _attack_damage)
+		_show_banner("SECURITY UNIT HIT")
+	else:
+		_show_banner("TARGET NOT ACQUIRED")
+
+func _set_third_person_view(enabled: bool) -> void:
+	_third_person_view = enabled
+	if _character_visual != null:
+		_character_visual.visible = enabled
+	if enabled:
+		third_person_camera.make_current()
+	else:
+		camera.make_current()
+	if _hud_label != null:
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
+
+func _active_player_camera() -> Camera3D:
+	return third_person_camera if _third_person_view else camera
 
 func _try_interact() -> void:
 	if _current_interactable.is_empty():
@@ -116,8 +259,8 @@ func _show_banner(msg: String) -> void:
 func _switch_to_cam(index: int) -> void:
 	_cctv_index = index
 	if _cctv_index == 0:
-		camera.make_current()
-		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
+		_active_player_camera().make_current()
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
 		_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
 		_interact_label.visible = true
 	else:
@@ -128,60 +271,50 @@ func _switch_to_cam(index: int) -> void:
 			_interact_label.visible = false
 
 func _physics_process(delta: float) -> void:
+	_invulnerability_timer = maxf(0.0, _invulnerability_timer - delta)
 	_rec_time += delta
-
-	# Banner timer
+	_character_anim_time += delta
 	if _banner_timer > 0.0:
 		_banner_timer -= delta
 		if _banner_timer <= 0.0:
 			_banner_label.text = ""
 
-	# Check interactables
 	if _cctv_index == 0 and not is_frozen:
 		var room_node := get_parent()
 		if room_node != null and room_node.has_method("get_nearest_interactable"):
 			_current_interactable = room_node.get_nearest_interactable(global_position)
-			if not _current_interactable.is_empty():
-				_interact_label.text = "⚡ [E] " + str(_current_interactable.get("prompt", "Interact"))
-			else:
-				_interact_label.text = ""
+			_interact_label.text = "⚡ [E] " + str(_current_interactable.get("prompt", "Interact")) if not _current_interactable.is_empty() else ""
 		else:
 			_interact_label.text = ""
 	else:
 		_interact_label.text = ""
 
-	# CCTV HUD
 	if _cctv_index > 0 and _cctv_index - 1 < _cctv_cams.size():
 		var rec_blink := "● REC" if fmod(_rec_time, 1.0) < 0.6 else "○ REC"
 		var cam_name := _cctv_cams[_cctv_index - 1].name
 		_hud_label.text = rec_blink + " " + cam_name + " [SURVEILLANCE FEED LIVE]\n[C / 1-9] Next Camera | [0 / Click / WASD] Return to Player"
 
-	# Auto return from CCTV on movement input
 	if _cctv_index != 0:
 		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_D):
 			_switch_to_cam(0)
-			return
-		return # Don't move player while viewing CCTV feeds
+		_update_character_animation(false)
+		return
 
-	# If frozen by narrative events, only apply gravity
 	if is_frozen:
 		velocity.x = lerp(velocity.x, 0.0, delta * 14.0)
 		velocity.z = lerp(velocity.z, 0.0, delta * 14.0)
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 		move_and_slide()
+		_was_moving = false
+		_update_character_animation(false)
 		return
 
-	# --- SOLID WALKING PHYSICS (NO FLYING) ---
-	# Gravity: only fall when not on floor
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-	else:
-		# Jump only when on solid floor
-		if Input.is_key_pressed(KEY_SPACE) and _current_interactable.is_empty():
-			velocity.y = jump_velocity
+	elif Input.is_key_pressed(KEY_SPACE) and _current_interactable.is_empty():
+		velocity.y = jump_velocity
 
-	# Input movement
 	var input_dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
 		input_dir.y -= 1.0
@@ -194,10 +327,7 @@ func _physics_process(delta: float) -> void:
 
 	input_dir = input_dir.normalized()
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-
-	# Walk vs Sprint
 	var current_speed := sprint_speed if Input.is_key_pressed(KEY_SHIFT) else walk_speed
-
 	if direction.length_squared() > 0.0:
 		velocity.x = lerp(velocity.x, direction.x * current_speed, delta * 12.0)
 		velocity.z = lerp(velocity.z, direction.z * current_speed, delta * 12.0)
@@ -206,3 +336,11 @@ func _physics_process(delta: float) -> void:
 		velocity.z = lerp(velocity.z, 0.0, delta * 14.0)
 
 	move_and_slide()
+	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
+	# Small, restrained head bob adds motion without allowing the camera to clip through the player mesh.
+	_headbob_time += delta * (12.0 if moving_now else 2.0)
+	head.position.y = 1.65 + (sin(_headbob_time) * (0.025 if moving_now else 0.006))
+	if moving_now and _audio != null and _audio.has_method("play_footstep"):
+		_audio.play_footstep()
+	_was_moving = moving_now
+	_update_character_animation(moving_now)

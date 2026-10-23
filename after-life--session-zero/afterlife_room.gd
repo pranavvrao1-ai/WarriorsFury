@@ -55,6 +55,7 @@ func _ready() -> void:
 	_make_doors()
 	_make_counter()
 	_make_robot()
+	_attach_robot_asset()
 	_make_esports_stage()
 	_make_arcade_alley()
 	_make_vending_zone()
@@ -62,6 +63,7 @@ func _ready() -> void:
 	_make_vr_pods()
 	_make_gaming_rows()
 	_make_sign()
+	_make_asset_characters()
 	for child in get_children():
 		if not pre_interior.has(child):
 			_cafe_interior_nodes.append(child)
@@ -345,6 +347,74 @@ func _make_counter() -> void:
 		_box(self, "Terminal base " + str(x), Vector3(0.7, 0.12, 0.45), Vector3(x, 1.4, -15.9), mats.black)
 		_box(self, "Terminal screen " + str(x), Vector3(0.65, 0.5, 0.08), Vector3(x, 1.7, -16.05), mats.screen)
 	_box(self, "Counter card reader", Vector3(0.35, 0.15, 0.35), Vector3(-1.4, 1.4, -15.6), mats.black)
+
+func _attach_robot_asset() -> void:
+	if robot_root == null:
+		return
+	var model_path := "res://robot/robot_police_unit_animated.glb"
+	if not ResourceLoader.exists(model_path):
+		push_warning("Robot character asset missing: " + model_path)
+		return
+	var packed := load(model_path) as PackedScene
+	if packed == null:
+		push_warning("Robot asset could not be imported as a scene: " + model_path)
+		return
+	for child in robot_root.get_children():
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).visible = false
+		elif child == robot_head:
+			robot_head.visible = false
+	var model := packed.instantiate() as Node3D
+	if model == null:
+		return
+	model.name = "Imported animated robot"
+	model.scale = Vector3.ONE
+	robot_root.add_child(model)
+	_play_first_character_animation(model)
+	var tag := Label3D.new()
+	tag.text = "OPERATOR [NEXUS-01]"
+	tag.font_size = 28
+	tag.pixel_size = 0.008
+	tag.modulate = Color("62f4ff")
+	tag.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	tag.position = Vector3(0, 2.5, 0)
+	model.add_child(tag)
+
+func _make_asset_characters() -> void:
+	_spawn_character_asset("res://characters/male1.glb", "Cafe guest A", Vector3(-10.0, 0.0, -5.0))
+	_spawn_character_asset("res://characters/female4.glb", "Cafe guest B", Vector3(-6.0, 0.0, -5.0))
+	_spawn_character_asset("res://characters/male4.glb", "Cafe guest C", Vector3(9.0, 0.0, -5.0))
+
+func _spawn_character_asset(path: String, node_name: String, spawn_position: Vector3) -> void:
+	if not ResourceLoader.exists(path):
+		push_warning("Character asset missing: " + path)
+		return
+	var packed := load(path) as PackedScene
+	if packed == null:
+		push_warning("Character asset could not be imported as a scene: " + path)
+		return
+	var character := packed.instantiate() as Node3D
+	if character == null:
+		return
+	character.name = node_name
+	character.position = spawn_position
+	add_child(character)
+	_play_first_character_animation(character)
+
+func _play_first_character_animation(root: Node) -> void:
+	if root is AnimationPlayer:
+		var animator := root as AnimationPlayer
+		var animations := animator.get_animation_list()
+		for animation_name in animations:
+			var lower_name := String(animation_name).to_lower()
+			if lower_name.contains("idle"):
+				animator.play(animation_name)
+				return
+		if not animations.is_empty():
+			animator.play(animations[0])
+			return
+	for child in root.get_children():
+		_play_first_character_animation(child)
 
 func _make_robot() -> void:
 	robot_root = Node3D.new()
@@ -651,7 +721,7 @@ func _make_gaming_rows() -> void:
 			_make_station_cluster(Vector3(x, 0, z))
 
 	register_interactable(
-		Vector3(-6.5, 1.1, 8.0),
+		Vector3(-10.0, 1.1, 8.0),
 		2.8,
 		"Log into Battle Station Terminal #01",
 		[
@@ -1500,12 +1570,35 @@ func _build_needen_environment() -> void:
 		_ne_box(root, "Banner%d_Frame" % i, Vector3(8.0, 3.5, 0.18), Vector3(bx, 7.0, bz), Color("0a0005"), Color("ff00cc"), 1.2)
 		_ne_box(root, "Banner%d_Text" % i, Vector3(6.5, 2.0, 0.12), Vector3(bx, 7.0, bz + 0.06), Color("000000"), Color("ffffff"), 2.0)
 
+	# Active security units: clear these before the Nexus-core dialogue can trigger.
+	_spawn_simulation_enemy(root, "Security Unit 01", Vector3(-7.0, 0.0, -3.0))
+	_spawn_simulation_enemy(root, "Security Unit 02", Vector3(7.0, 0.0, -3.0))
+	_spawn_simulation_enemy(root, "Security Unit 03", Vector3(0.0, 0.0, -21.0))
+
 	# --- NEXUS OBELISK LIGHTS ---
 	_add_point_light_to(root, Vector3(0, 14, -12), Color("cc00ff"), 4.5, 22.0)
 	_add_point_light_to(root, Vector3(0, 4, -12), Color("ff0044"), 3.5, 18.0)
 	_add_point_light_to(root, Vector3(-12, 3, -5), Color("ff2200"), 2.5, 14.0)
 	_add_point_light_to(root, Vector3(12, 3, -5), Color("8800ff"), 2.5, 14.0)
 	_add_point_light_to(root, Vector3(0, 2, 10), Color("ff0066"), 2.0, 12.0)
+
+func _spawn_simulation_enemy(parent: Node3D, enemy_name: String, spawn_position: Vector3) -> void:
+	var enemy_script := load("res://after-life--session-zero/sim_enemy.gd") as Script
+	if enemy_script == null:
+		push_warning("Could not load simulation enemy script.")
+		return
+	var enemy := Node3D.new()
+	enemy.name = enemy_name
+	enemy.position = spawn_position
+	enemy.set_script(enemy_script)
+	parent.add_child(enemy)
+
+func get_needen_enemy_count() -> int:
+	var count := 0
+	for node in get_tree().get_nodes_in_group("simulation_enemy"):
+		if is_instance_valid(node):
+			count += 1
+	return count
 
 # Helper: creates a glowing emissive box for Neo-Eden environment
 func _ne_box(parent: Node3D, lbl: String, size: Vector3, pos: Vector3, albedo: Color, emission: Color, emit_energy: float) -> MeshInstance3D:
