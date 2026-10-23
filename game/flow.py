@@ -117,7 +117,12 @@ def run_step(game, index):
         print("Completed:", kind, arg)
 
         if kind == "combat":
-            show_level_choice(game, index + 1, arg)
+            if arg == 2:
+                # Stage 3 Boss (NEXUS) defeated!
+                # Do NOT show a shop/replay menu — immediately trigger the simulation collapse & twist ending!
+                run_step(game, index + 1)
+            else:
+                show_level_choice(game, index + 1, arg)
         else:
             run_step(game, index + 1)
 

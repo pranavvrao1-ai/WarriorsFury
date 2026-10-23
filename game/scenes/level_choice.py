@@ -26,8 +26,16 @@ class LevelChoiceScene(Scene):
         self.on_advance = on_advance
         self.sel = 0
 
-        # Only show restart options for levels already reached.
-        self.options = ["REPLAY LEVEL 1"]
+        # Primary advance option always first
+        if cleared_stage == 0:
+            self.options = ["ADVANCE TO LEVEL 2"]
+        elif cleared_stage == 1:
+            self.options = ["ADVANCE TO LEVEL 3"]
+        else:
+            self.options = ["CONTINUE STORY"]
+
+        self.options.append("VISIT NEXUS SHOP")
+        self.options.append("REPLAY LEVEL 1")
 
         if cleared_stage >= 1:
             self.options.append("RESTART LEVEL 2")
@@ -35,27 +43,13 @@ class LevelChoiceScene(Scene):
         if cleared_stage >= 2:
             self.options.append("RESTART LEVEL 3")
 
-        self.options.append("VISIT NEXUS SHOP")
-
-        if cleared_stage == 0:
-            self.options.append("ADVANCE TO LEVEL 2")
-        elif cleared_stage == 1:
-            self.options.append("ADVANCE TO LEVEL 3")
-        else:
-            self.options.append("CONTINUE STORY")
-
     def _rects(self):
         total = len(self.options)
-        button_height = 58
-        gap = 18
+        button_height = 46
+        gap = 12
 
         total_height = total * button_height + (total - 1) * gap
-
-        # Center the buttons vertically in the space below the headings.
-        start_y = max(
-            250,
-            (HEIGHT + 150 - total_height) // 2,
-        )
+        start_y = 190 + (HEIGHT - 190 - total_height) // 2
 
         return [
             pygame.Rect(
@@ -71,14 +65,16 @@ class LevelChoiceScene(Scene):
         audio.play_sfx("click")
         selected = self.options[self.sel]
 
-        if selected == "REPLAY LEVEL 1":
+        if "ADVANCE" in selected or "CONTINUE STORY" in selected:
+            self.on_advance()
+        elif selected == "VISIT NEXUS SHOP":
+            self.on_shop()
+        elif selected == "REPLAY LEVEL 1":
             self.on_replay()
         elif selected == "RESTART LEVEL 2":
             self.on_restart(1)
         elif selected == "RESTART LEVEL 3":
             self.on_restart(2)
-        elif selected == "VISIT NEXUS SHOP":
-            self.on_shop()
         else:
             self.on_advance()
 
@@ -116,18 +112,18 @@ class LevelChoiceScene(Scene):
         draw_text(
             screen,
             f"STAGE {stage_num} COMPLETED",
-            get_font(42, True),
+            get_font(38, True),
             accent,
-            (WIDTH // 2, 75),
+            (WIDTH // 2, 60),
             center=True,
         )
 
         draw_text(
             screen,
             "NEXUS SUBSYSTEM READY. CHOOSE ACTION:",
-            get_font(20),
+            get_font(18),
             WHITE,
-            (WIDTH // 2, 135),
+            (WIDTH // 2, 115),
             center=True,
         )
 
@@ -150,7 +146,7 @@ class LevelChoiceScene(Scene):
             draw_text(
                 screen,
                 opt,
-                get_font(20, True),
+                get_font(19, True),
                 WHITE if selected else GREY,
                 rect.center,
                 center=True,
