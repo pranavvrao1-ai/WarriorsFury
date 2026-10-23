@@ -180,64 +180,47 @@ func _switch_to_cam(index: int) -> void:
 
 func _physics_process(delta: float) -> void:
 	_rec_time += delta
-
-	# Banner timer
 	if _banner_timer > 0.0:
 		_banner_timer -= delta
 		if _banner_timer <= 0.0:
 			_banner_label.text = ""
 
-	# Check interactables
 	if _cctv_index == 0 and not is_frozen:
 		var room_node := get_parent()
 		if room_node != null and room_node.has_method("get_nearest_interactable"):
 			_current_interactable = room_node.get_nearest_interactable(global_position)
-			if not _current_interactable.is_empty():
-				_interact_label.text = "⚡ [E] " + str(_current_interactable.get("prompt", "Interact"))
-			else:
-				_interact_label.text = ""
+			_interact_label.text = "⚡ [E] " + str(_current_interactable.get("prompt", "Interact")) if not _current_interactable.is_empty() else ""
 		else:
 			_interact_label.text = ""
 	else:
 		_interact_label.text = ""
 
-	# CCTV HUD
 	if _cctv_index > 0 and _cctv_index - 1 < _cctv_cams.size():
 		var rec_blink := "● REC" if fmod(_rec_time, 1.0) < 0.6 else "○ REC"
 		var cam_name := _cctv_cams[_cctv_index - 1].name
 		_hud_label.text = rec_blink + " " + cam_name + " [SURVEILLANCE FEED LIVE]\n[C / 1-9] Next Camera | [0 / Click / WASD] Return to Player"
 
-	# Auto return from CCTV on movement input
 	if _cctv_index != 0:
 		if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_D):
 			_switch_to_cam(0)
-			return
-		return # Don't move player while viewing CCTV feeds
+		_update_character_animation(false)
+		return
 
-	# If frozen by narrative events, only apply gravity
 	if is_frozen:
 		velocity.x = lerp(velocity.x, 0.0, delta * 14.0)
 		velocity.z = lerp(velocity.z, 0.0, delta * 14.0)
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 		move_and_slide()
-	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
-	if moving_now and not _was_moving and _audio != null and _audio.has_method("play_footstep"):
-		_audio.play_footstep()
-	_was_moving = moving_now
-	_update_character_animation(moving_now)
+		_was_moving = false
+		_update_character_animation(false)
 		return
 
-	# --- SOLID WALKING PHYSICS (NO FLYING) ---
-	# Gravity: only fall when not on floor
 	if not is_on_floor():
 		velocity.y -= gravity * delta
-	else:
-		# Jump only when on solid floor
-		if Input.is_key_pressed(KEY_SPACE) and _current_interactable.is_empty():
-			velocity.y = jump_velocity
+	elif Input.is_key_pressed(KEY_SPACE) and _current_interactable.is_empty():
+		velocity.y = jump_velocity
 
-	# Input movement
 	var input_dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
 		input_dir.y -= 1.0
@@ -250,10 +233,7 @@ func _physics_process(delta: float) -> void:
 
 	input_dir = input_dir.normalized()
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-
-	# Walk vs Sprint
 	var current_speed := sprint_speed if Input.is_key_pressed(KEY_SHIFT) else walk_speed
-
 	if direction.length_squared() > 0.0:
 		velocity.x = lerp(velocity.x, direction.x * current_speed, delta * 12.0)
 		velocity.z = lerp(velocity.z, direction.z * current_speed, delta * 12.0)
@@ -262,3 +242,8 @@ func _physics_process(delta: float) -> void:
 		velocity.z = lerp(velocity.z, 0.0, delta * 14.0)
 
 	move_and_slide()
+	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
+	if moving_now and not _was_moving and _audio != null and _audio.has_method("play_footstep"):
+		_audio.play_footstep()
+	_was_moving = moving_now
+	_update_character_animation(moving_now)
