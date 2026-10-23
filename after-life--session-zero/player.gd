@@ -109,14 +109,21 @@ func _create_hud() -> void:
 
 	# Top info HUD
 	_hud_label = Label.new()
-	_hud_label.position = Vector2(24, 20)
-	_hud_label.add_theme_font_size_override("font_size", 16)
+	_hud_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_hud_label.offset_left = 24
+	_hud_label.offset_top = 20
+	_hud_label.offset_right = -24
+	_hud_label.offset_bottom = 46
+	_hud_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hud_label.add_theme_font_size_override("font_size", 15)
 	_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
 	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
 	canvas.add_child(_hud_label)
 
 	_health_label = Label.new()
-	_health_label.position = Vector2(24, 48)
+	_health_label.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	_health_label.position = Vector2(24, 50)
+	_health_label.size = Vector2(420, 28)
 	_health_label.add_theme_font_size_override("font_size", 18)
 	_health_label.add_theme_color_override("font_color", Color("ff6b75"))
 	_health_label.text = "HP 100 / 100  |  [LMB] Fire"
@@ -135,10 +142,14 @@ func _create_hud() -> void:
 
 	# Action feedback banner (top center)
 	_banner_label = Label.new()
-	_banner_label.anchors_preset = Control.PRESET_CENTER_TOP
-	_banner_label.position = Vector2(0, 70)
-	_banner_label.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_banner_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	_banner_label.offset_left = 32
+	_banner_label.offset_top = 76
+	_banner_label.offset_right = -32
+	_banner_label.offset_bottom = 144
+	_banner_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_banner_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_banner_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_banner_label.add_theme_font_size_override("font_size", 20)
 	_banner_label.add_theme_color_override("font_color", Color("55ffaa"))
 	_banner_label.text = ""
