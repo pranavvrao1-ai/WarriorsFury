@@ -26,6 +26,7 @@ var _idle_anim: StringName = &""
 var _walk_anim: StringName = &""
 var _run_anim: StringName = &""
 var _was_moving: bool = false
+var _character_anim_time: float = 0.0
 
 var _current_interactable: Dictionary = {}
 
@@ -53,28 +54,41 @@ func _attach_character_model() -> void:
 
 func _play_idle_animation(root: Node) -> void:
 	if root is AnimationPlayer and _model_animator == null:
-		_model_animator = root as AnimationPlayer
-		for animation_name in _model_animator.get_animation_list():
-			var lower_name := String(animation_name).to_lower()
-			if _idle_anim == &"" and lower_name.contains("idle"):
-				_idle_anim = StringName(animation_name)
-			elif _walk_anim == &"" and (lower_name.contains("walk") or lower_name.contains("run")):
-				_walk_anim = StringName(animation_name)
-			if _run_anim == &"" and lower_name.contains("run"):
-				_run_anim = StringName(animation_name)
+		var candidate := root as AnimationPlayer
+		if not candidate.get_animation_list().is_empty():
+			_model_animator = candidate
+			for animation_name in _model_animator.get_animation_list():
+				var lower_name := String(animation_name).to_lower()
+				if _idle_anim == &"" and lower_name.contains("idle"):
+					_idle_anim = StringName(animation_name)
+				elif _walk_anim == &"" and (lower_name.contains("walk") or lower_name.contains("run")):
+					_walk_anim = StringName(animation_name)
+				if _run_anim == &"" and lower_name.contains("run"):
+					_run_anim = StringName(animation_name)
+			if _idle_anim == &"" and _walk_anim == &"" and _run_anim == &"":
+				_model_animator = null
 	for child in root.get_children():
 		_play_idle_animation(child)
 	if root == _character_visual:
 		_update_character_animation(false)
 
 func _update_character_animation(moving: bool) -> void:
-	if _model_animator == null:
+	if _model_animator != null:
+		var target: StringName = _idle_anim
+		if moving:
+			target = _run_anim if Input.is_key_pressed(KEY_SHIFT) and _run_anim != &"" else _walk_anim
+		if target != &"" and _model_animator.current_animation != target:
+			_model_animator.play(target)
 		return
-	var target: StringName = _idle_anim
-	if moving:
-		target = _run_anim if Input.is_key_pressed(KEY_SHIFT) and _run_anim != &"" else _walk_anim
-	if target != &"" and _model_animator.current_animation != target:
-		_model_animator.play(target)
+
+	# The bundled player GLB is rigged but contains no animation clips.
+	# Keep the character alive with a lightweight procedural idle/walk cycle.
+	if _character_visual != null:
+		var speed := 11.0 if moving else 1.7
+		var bob := 0.035 if moving else 0.008
+		_character_visual.position.y = sin(_character_anim_time * speed) * bob
+		_character_visual.rotation.x = -0.035 if moving else 0.0
+		_character_visual.rotation.z = sin(_character_anim_time * speed * 0.5) * (0.025 if moving else 0.005)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -180,6 +194,7 @@ func _switch_to_cam(index: int) -> void:
 
 func _physics_process(delta: float) -> void:
 	_rec_time += delta
+	_character_anim_time += delta
 	if _banner_timer > 0.0:
 		_banner_timer -= delta
 		if _banner_timer <= 0.0:
