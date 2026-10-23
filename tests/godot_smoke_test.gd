@@ -71,11 +71,14 @@ func _run_smoke_test() -> void:
 
 	if audio != null:
 		audio.play_music("suspense")
-		_check(audio.get_node_or_null("Music") != null and audio.get_node("Music").stream != null, "Music asset must load into the music player.", failures)
+		var music_player := audio.get_node_or_null("Music") as AudioStreamPlayer
+		_check(music_player != null and music_player.stream != null, "Music asset must load into the music player.", failures)
 		audio.play_voice_for_speaker("NEXUS-01")
-		_check(audio.get_node_or_null("Dialogue") != null and audio.get_node("Dialogue").stream != null, "NEXUS dialogue audio must load.", failures)
+		var dialogue_player := audio.get_node_or_null("Dialogue") as AudioStreamPlayer
+		_check(dialogue_player != null and dialogue_player.stream != null, "NEXUS dialogue audio must load.", failures)
 		audio.play_sfx("typing")
-		_check(audio.get_node_or_null("SFX") != null and audio.get_node("SFX").stream != null, "Typing sound effect must load.", failures)
+		var sfx_player := audio.get_node_or_null("SFX") as AudioStreamPlayer
+		_check(sfx_player != null and sfx_player.stream != null, "Typing sound effect must load.", failures)
 
 	for path in [
 		"res://characters/male3.glb",
