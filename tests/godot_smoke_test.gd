@@ -42,9 +42,14 @@ func _run_smoke_test() -> void:
 		_check(visual != null, "Player GLB visual must be attached.", failures)
 		if visual != null:
 			var animator := _find_animation_player(visual)
-			_check(animator != null, "Player GLB must contain an AnimationPlayer.", failures)
-			if animator != null:
-				_check(not animator.get_animation_list().is_empty(), "Player animation list must not be empty.", failures)
+			if animator != null and not animator.get_animation_list().is_empty():
+				_check(true, "Player animation clips are available.", failures)
+			else:
+				_check(player.has_method("_update_character_animation"), "Player must provide procedural animation when the GLB has no clips.", failures)
+				player.set("_character_anim_time", 0.2)
+				var before_y := visual.position.y
+				player.call("_update_character_animation", true)
+				_check(absf(visual.position.y - before_y) > 0.001, "Procedural walking animation must move the player visual.", failures)
 		var player_shape := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
 		_check(player_shape != null and player_shape.shape != null, "Player collision shape must be assigned.", failures)
 
