@@ -258,7 +258,7 @@ func _switch_to_cam(index: int) -> void:
 	_cctv_index = index
 	if _cctv_index == 0:
 		_active_player_camera().make_current()
-		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
 		_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
 		_interact_label.visible = true
 	else:
