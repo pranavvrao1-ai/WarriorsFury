@@ -56,10 +56,10 @@ ACT1 = [
     narr("You ignore it and keep playing."),
     narr("Hours pass. The other PCs stay empty. The receptionist has disappeared."),
     narr("A new screen appears."),
-    choice("WOULD YOU LIKE TO ENTER THE {y:FINAL LEVEL}?", ["YES"]),
     fx("flash"),
-    narr("The monitor flashes white. And the world disappears."),
+    narr("The monitor flashes white. And the world disappears.")
 ]
+
 
 ACT2_INTRO = [
     narr("NEO-EDEN. YEAR 2189."),

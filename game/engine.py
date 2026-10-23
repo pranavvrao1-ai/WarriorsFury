@@ -1,6 +1,7 @@
 import pygame
 
 from game.settings import WIDTH, HEIGHT, FPS, TITLE
+from game.entities.progression import PlayerProgression
 
 
 class Game:
@@ -12,6 +13,7 @@ class Game:
         self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
         self.clock = pygame.time.Clock()
         self.scene = None
+        self.progression = PlayerProgression()
         self.running = True
         self.to_title = lambda: None  # set by flow.start_title
 

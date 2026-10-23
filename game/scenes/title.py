@@ -1,5 +1,5 @@
-import random
 
+import random
 import pygame
 
 from game.scenes.base import Scene
@@ -25,7 +25,15 @@ class TitleScene(Scene):
             self.game.quit()
 
     def _rects(self):
-        return [pygame.Rect(WIDTH // 2 - 130, 330 + i * 60, 260, 46) for i in range(len(self.OPTIONS))]
+        return [
+            pygame.Rect(
+                WIDTH // 2 - 130,
+                330 + i * 60,
+                260,
+                46,
+            )
+            for i in range(len(self.OPTIONS))
+        ]
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
@@ -35,13 +43,15 @@ class TitleScene(Scene):
                 self.sel = (self.sel + 1) % len(self.OPTIONS)
             elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self._activate()
+
         elif event.type == pygame.MOUSEMOTION:
-            for i, r in enumerate(self._rects()):
-                if r.collidepoint(event.pos):
+            for i, rect in enumerate(self._rects()):
+                if rect.collidepoint(event.pos):
                     self.sel = i
+
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            for i, r in enumerate(self._rects()):
-                if r.collidepoint(event.pos):
+            for i, rect in enumerate(self._rects()):
+                if rect.collidepoint(event.pos):
                     self.sel = i
                     self._activate()
 
@@ -54,13 +64,36 @@ class TitleScene(Scene):
     def draw(self, screen):
         accent = THEMES["sim"]["accent"]
         screen.blit(get_background("sim"), (0, 0))
-        draw_text(screen, "WARRIOR'S FURY", get_font(64, True), accent, (WIDTH // 2, 160), center=True)
-        draw_text(screen, "THE FINAL LEVEL", get_font(28), WHITE, (WIDTH // 2, 225), center=True)
-        for i, (opt, r) in enumerate(zip(self.OPTIONS, self._rects())):
+        draw_text(
+            screen, "WARRIOR'S FURY", get_font(64, True),
+            accent, (WIDTH // 2, 160), center=True
+        )
+        draw_text(
+            screen, "A STORY OF WARRIORS", get_font(28),
+            WHITE, (WIDTH // 2, 225), center=True
+        )
+
+        for i, (opt, rect) in enumerate(
+            zip(self.OPTIONS, self._rects())
+        ):
             selected = i == self.sel
-            pygame.draw.rect(screen, accent if selected else GREY, r, 2 if selected else 1, border_radius=6)
-            draw_text(screen, opt, get_font(24, selected), WHITE if selected else GREY, r.center, center=True)
-        draw_text(screen, "Never explain the mystery completely.", get_font(14), GREY, (WIDTH // 2, HEIGHT - 30), center=True)
+            pygame.draw.rect(
+                screen, accent if selected else GREY,
+                rect, 2 if selected else 1, border_radius=6
+            )
+            draw_text(
+                screen, opt, get_font(24, selected),
+                WHITE if selected else GREY,
+                rect.center, center=True
+            )
+
+        draw_text(
+            screen, "Never explain the mystery completely.",
+            get_font(14), GREY,
+            (WIDTH // 2, HEIGHT - 30), center=True
+        )
+
         if self.glitch_t > 0:
             apply_glitch(screen, 8)
+
         draw_scanlines(screen)
