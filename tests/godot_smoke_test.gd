@@ -41,6 +41,8 @@ func _run_smoke_test() -> void:
 		var visual := player.get_node_or_null("PlayerCharacterVisual") as Node3D
 		_check(visual != null, "Player GLB visual must be attached.", failures)
 		if visual != null:
+			_check(not visual.visible, "First-person player mesh must be hidden to prevent camera clipping.", failures)
+		if visual != null:
 			var animator := _find_animation_player(visual)
 			if animator != null and not animator.get_animation_list().is_empty():
 				_check(true, "Player animation clips are available.", failures)
