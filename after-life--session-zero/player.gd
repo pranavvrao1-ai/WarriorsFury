@@ -112,7 +112,7 @@ func _create_hud() -> void:
 	_hud_label.position = Vector2(24, 20)
 	_hud_label.add_theme_font_size_override("font_size", 16)
 	_hud_label.add_theme_color_override("font_color", Color("74f4ff"))
-	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
+	_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
 	canvas.add_child(_hud_label)
 
 	_health_label = Label.new()
@@ -181,8 +181,6 @@ func _unhandled_input(event: InputEvent) -> void:
 			_switch_to_cam(0)
 		elif event.keycode == KEY_E and _cctv_index == 0:
 			_try_interact()
-		elif event.keycode == KEY_V and _cctv_index == 0:
-			_set_third_person_view(not _third_person_view)
 	elif event is InputEventMouseMotion and _mouse_captured and _cctv_index == 0:
 		rotate_y(-event.relative.x * look_sensitivity)
 		head.rotate_x(-event.relative.y * look_sensitivity)
@@ -238,7 +236,7 @@ func _set_third_person_view(enabled: bool) -> void:
 	else:
 		camera.make_current()
 	if _hud_label != null:
-		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [V] Toggle View | [C] CCTV (1-9)"
+		_hud_label.text = "[Shift] Sprint | [WASD] Walk | [Space] Jump | [E] Interact | [C] CCTV (1-9)"
 
 func _active_player_camera() -> Camera3D:
 	return third_person_camera if _third_person_view else camera
