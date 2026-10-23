@@ -90,7 +90,7 @@ class NexusShopScene(Scene):
 
         draw_text(
             screen,
-            f"AVAILABLE CREDITS: {self.progression.credits}",
+            f"AVAILABLE POINTS: {self.progression.points}",
             get_font(20),
             WHITE,
             (WIDTH // 2, 125),
@@ -150,7 +150,7 @@ class NexusShopScene(Scene):
 
             draw_text(
                 screen,
-                f"{cost} CREDITS",
+                f"{cost} POINTS",
                 get_font(18, True),
                 accent,
                 (rect.right - 130, rect.centery),

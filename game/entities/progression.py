@@ -1,4 +1,3 @@
-
 """Persistent player progression, points, and purchased upgrades."""
 
 
@@ -41,6 +40,14 @@ class PlayerProgression:
         self.shield_capacity = 0
         self.armor_owned = False
         self.overclock_owned = False
+
+    @property
+    def credits(self):
+        return self.points
+
+    @credits.setter
+    def credits(self, value):
+        self.points = value
 
     def grant_stage_reward(self, stage_index):
         """Award increasing points on every stage clear."""

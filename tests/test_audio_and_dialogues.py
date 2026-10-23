@@ -7,6 +7,9 @@ from game.settings import BASE_DIR, DIALOGUES_DIR, MUSIC_DIR, FOOTSTEPS_DIR
 from game.data.story import STORY
 from game.audio import audio
 from game.ui.portraits import portraits
+from game.engine import Game
+from game.scenes.shop import NexusShopScene
+from game.scenes.level_choice import LevelChoiceScene
 
 
 def test_all_story_dialogues_exist_on_disk():
@@ -61,3 +64,25 @@ def test_audio_playback_methods_headless_safe():
     audio.play_footstep(0.4)
     audio.stop_voice()
     audio.stop_music()
+
+
+def test_shop_and_level_choice_scenes_run_and_draw():
+    """Ensure shop and level choice scenes initialize, update, draw, and handle purchases without errors."""
+    game = Game()
+    shop = NexusShopScene(game, on_done=lambda: None)
+    game.set_scene(shop)
+    game.tick(0.016, [])
+    # Purchase an item
+    shop._buy_selected()
+    game.tick(0.016, [])
+
+    choice = LevelChoiceScene(
+        game,
+        cleared_stage=0,
+        on_replay=lambda: None,
+        on_restart=lambda stage: None,
+        on_shop=lambda: None,
+        on_advance=lambda: None,
+    )
+    game.set_scene(choice)
+    game.tick(0.016, [])
