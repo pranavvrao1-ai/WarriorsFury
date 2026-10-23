@@ -1,0 +1,146 @@
+
+import pygame
+
+from game.scenes.base import Scene
+from game.settings import WIDTH, HEIGHT, THEMES, WHITE, GREY
+from game.ui.effects import get_background, draw_scanlines
+from game.ui.text import get_font, draw_text
+
+
+class LevelChoiceScene(Scene):
+    def __init__(
+        self,
+        game,
+        cleared_stage,
+        on_replay,
+        on_restart,
+        on_shop,
+        on_advance,
+    ):
+        super().__init__(game)
+
+        self.cleared_stage = cleared_stage
+        self.on_replay = on_replay
+        self.on_restart = on_restart
+        self.on_shop = on_shop
+        self.on_advance = on_advance
+        self.sel = 0
+
+        # Only show restart options for levels already reached.
+        self.options = ["REPLAY LEVEL 1"]
+
+        if cleared_stage >= 1:
+            self.options.append("RESTART LEVEL 2")
+
+        if cleared_stage >= 2:
+            self.options.append("RESTART LEVEL 3")
+
+        self.options.append("VISIT NEXUS SHOP")
+
+        if cleared_stage == 0:
+            self.options.append("ADVANCE TO LEVEL 2")
+        elif cleared_stage == 1:
+            self.options.append("ADVANCE TO LEVEL 3")
+        else:
+            self.options.append("CONTINUE STORY")
+
+    def _rects(self):
+        total = len(self.options)
+        button_height = 58
+        gap = 18
+
+        total_height = total * button_height + (total - 1) * gap
+
+        # Center the buttons vertically in the space below the headings.
+        start_y = max(
+            250,
+            (HEIGHT + 150 - total_height) // 2,
+        )
+
+        return [
+            pygame.Rect(
+                WIDTH // 2 - 240,
+                start_y + i * (button_height + gap),
+                480,
+                button_height,
+            )
+            for i in range(total)
+        ]
+
+    def _activate(self):
+        selected = self.options[self.sel]
+
+        if selected == "REPLAY LEVEL 1":
+            self.on_replay()
+        elif selected == "RESTART LEVEL 2":
+            self.on_restart(1)
+        elif selected == "RESTART LEVEL 3":
+            self.on_restart(2)
+        elif selected == "VISIT NEXUS SHOP":
+            self.on_shop()
+        else:
+            self.on_advance()
+
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_UP, pygame.K_w):
+                self.sel = (self.sel - 1) % len(self.options)
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self.sel = (self.sel + 1) % len(self.options)
+            elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                self._activate()
+
+        elif event.type == pygame.MOUSEMOTION:
+            for i, rect in enumerate(self._rects()):
+                if rect.collidepoint(event.pos):
+                    self.sel = i
+
+        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            for i, rect in enumerate(self._rects()):
+                if rect.collidepoint(event.pos):
+                    self.sel = i
+                    self._activate()
+                    break
+
+    def update(self, dt):
+        pass
+
+    def draw(self, screen):
+        accent = THEMES["sim"]["accent"]
+        screen.blit(get_background("sim"), (0, 0))
+
+        draw_text(
+            screen, "STAGE CLEARED", get_font(40, True),
+            accent, (WIDTH // 2, 75), center=True,
+        )
+
+        draw_text(
+            screen,
+            f"AVAILABLE POINTS: {self.game.progression.points}",
+            get_font(21, True), WHITE,
+            (WIDTH // 2, 135), center=True,
+        )
+
+        for i, (option, rect) in enumerate(
+            zip(self.options, self._rects())
+        ):
+            selected = i == self.sel
+
+            pygame.draw.rect(
+                screen, accent if selected else GREY,
+                rect, 2 if selected else 1, border_radius=6,
+            )
+
+            draw_text(
+                screen, option, get_font(20, selected),
+                WHITE if selected else GREY,
+                rect.center, center=True,
+            )
+
+        draw_text(
+            screen, "UP/DOWN: SELECT  |  ENTER: CONFIRM",
+            get_font(14), GREY,
+            (WIDTH // 2, HEIGHT - 20), center=True,
+        )
+
+        draw_scanlines(screen)
