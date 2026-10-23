@@ -38,7 +38,7 @@ func _run_smoke_test() -> void:
 	_check(story != null and story.has_method("set_act"), "Story manager must expose story act transitions.", failures)
 
 	if player != null:
-		var visual := player.get_node_or_null("PlayerCharacterVisual")
+		var visual := player.get_node_or_null("PlayerCharacterVisual") as Node3D
 		_check(visual != null, "Player GLB visual must be attached.", failures)
 		if visual != null:
 			var animator := _find_animation_player(visual)
@@ -47,7 +47,7 @@ func _run_smoke_test() -> void:
 			else:
 				_check(player.has_method("_update_character_animation"), "Player must provide procedural animation when the GLB has no clips.", failures)
 				player.set("_character_anim_time", 0.2)
-				var before_y := visual.position.y
+				var before_y: float = visual.position.y
 				player.call("_update_character_animation", true)
 				_check(absf(visual.position.y - before_y) > 0.001, "Procedural walking animation must move the player visual.", failures)
 		var player_shape := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
