@@ -406,15 +406,20 @@ func _spawn_character_asset(path: String, node_name: String, spawn_position: Vec
 	_play_first_character_animation(character)
 
 func _play_first_character_animation(root: Node) -> void:
+	# Prefer a calm, repeatable standing animation. Never blindly play the first
+	# imported clip: it may be a walk, attack, fall, or one-shot pose.
 	if root is AnimationPlayer:
 		var animator := root as AnimationPlayer
 		var animations := animator.get_animation_list()
-		for animation_name in animations:
-			var lower_name := String(animation_name).to_lower()
-			if lower_name.contains("idle"):
-				animator.play(animation_name)
-				return
-		if not animations.is_empty():
+		var preferred_terms := ["idle", "stand", "wait", "relax", "look", "talk", "breath"]
+		for term in preferred_terms:
+			for animation_name in animations:
+				if String(animation_name).to_lower().contains(term):
+					animator.play(animation_name)
+					return
+		# GLB exporters sometimes give a single looping idle clip a generic name.
+		# Use it only when it is the sole clip; don't select randomly among actions.
+		if animations.size() == 1:
 			animator.play(animations[0])
 			return
 	for child in root.get_children():
