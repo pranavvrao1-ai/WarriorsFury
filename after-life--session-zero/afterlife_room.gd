@@ -721,7 +721,7 @@ func _make_gaming_rows() -> void:
 			_make_station_cluster(Vector3(x, 0, z))
 
 	register_interactable(
-		Vector3(-6.5, 1.1, 8.0),
+		Vector3(-10.0, 1.1, 8.0),
 		2.8,
 		"Log into Battle Station Terminal #01",
 		[
@@ -1570,12 +1570,35 @@ func _build_needen_environment() -> void:
 		_ne_box(root, "Banner%d_Frame" % i, Vector3(8.0, 3.5, 0.18), Vector3(bx, 7.0, bz), Color("0a0005"), Color("ff00cc"), 1.2)
 		_ne_box(root, "Banner%d_Text" % i, Vector3(6.5, 2.0, 0.12), Vector3(bx, 7.0, bz + 0.06), Color("000000"), Color("ffffff"), 2.0)
 
+	# Active security units: clear these before the Nexus-core dialogue can trigger.
+	_spawn_simulation_enemy(root, "Security Unit 01", Vector3(-7.0, 0.0, -3.0))
+	_spawn_simulation_enemy(root, "Security Unit 02", Vector3(7.0, 0.0, -3.0))
+	_spawn_simulation_enemy(root, "Security Unit 03", Vector3(0.0, 0.0, -21.0))
+
 	# --- NEXUS OBELISK LIGHTS ---
 	_add_point_light_to(root, Vector3(0, 14, -12), Color("cc00ff"), 4.5, 22.0)
 	_add_point_light_to(root, Vector3(0, 4, -12), Color("ff0044"), 3.5, 18.0)
 	_add_point_light_to(root, Vector3(-12, 3, -5), Color("ff2200"), 2.5, 14.0)
 	_add_point_light_to(root, Vector3(12, 3, -5), Color("8800ff"), 2.5, 14.0)
 	_add_point_light_to(root, Vector3(0, 2, 10), Color("ff0066"), 2.0, 12.0)
+
+func _spawn_simulation_enemy(parent: Node3D, enemy_name: String, spawn_position: Vector3) -> void:
+	var enemy_script := load("res://after-life--session-zero/sim_enemy.gd") as Script
+	if enemy_script == null:
+		push_warning("Could not load simulation enemy script.")
+		return
+	var enemy := Node3D.new()
+	enemy.name = enemy_name
+	enemy.position = spawn_position
+	enemy.set_script(enemy_script)
+	parent.add_child(enemy)
+
+func get_needen_enemy_count() -> int:
+	var count := 0
+	for node in get_tree().get_nodes_in_group("simulation_enemy"):
+		if is_instance_valid(node) and node.is_visible_in_tree():
+			count += 1
+	return count
 
 # Helper: creates a glowing emissive box for Neo-Eden environment
 func _ne_box(parent: Node3D, lbl: String, size: Vector3, pos: Vector3, albedo: Color, emission: Color, emit_energy: float) -> MeshInstance3D:
