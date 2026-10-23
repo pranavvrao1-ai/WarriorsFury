@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://after-life--session-zero/afterlife_room.gd" id="1_room"]
 [ext_resource type="Script" path="res://after-life--session-zero/player.gd" id="2_player"]
 [ext_resource type="Script" path="res://after-life--session-zero/story_manager.gd" id="3_story"]
+[ext_resource type="Script" path="res://after-life--session-zero/audio_manager.gd" id="4_audio"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_theap"]
 size = Vector2(85, 85)
