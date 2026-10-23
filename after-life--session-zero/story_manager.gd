@@ -425,8 +425,11 @@ func _override_terminal07_for_act1() -> void:
 		room_root.override_interactable_callback("Terminal #07", Callable(self, "launch_terminal07"))
 
 func launch_terminal07() -> void:
-	if _audio != null and _audio.has_method("play_music"):
-		_audio.play_music("typing")
+	if _audio != null:
+		if _audio.has_method("play_music"):
+			_audio.play_music("tension")
+		if _audio.has_method("play_sfx"):
+			_audio.play_sfx("typing")
 	if player:
 		player.is_frozen = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -590,6 +593,8 @@ func _close_receipt() -> void:
 
 func _trigger_phone_call() -> void:
 	phone_step = 0
+	if _audio != null and _audio.has_method("play_sfx"):
+		_audio.play_sfx("phone")
 	if player:
 		player.is_frozen = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
