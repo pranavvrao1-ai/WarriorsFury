@@ -32,9 +32,15 @@ var _voice_index: Dictionary = {}
 var _last_step_ms: int = 0
 
 func _ready() -> void:
- _music_player = _make_player("Music", -12.0)
- _voice_player = _make_player("Dialogue", -3.0)
- _sfx_player = _make_player("SFX", -7.0)
+ _ensure_players()
+
+func _ensure_players() -> void:
+ if _music_player == null:
+  _music_player = _make_player("Music", -12.0)
+ if _voice_player == null:
+  _voice_player = _make_player("Dialogue", -3.0)
+ if _sfx_player == null:
+  _sfx_player = _make_player("SFX", -7.0)
 
 func _make_player(player_name: String, volume_db: float) -> AudioStreamPlayer:
  var player := AudioStreamPlayer.new()
@@ -44,6 +50,7 @@ func _make_player(player_name: String, volume_db: float) -> AudioStreamPlayer:
  return player
 
 func play_music(key: String) -> void:
+ _ensure_players()
  var path: String = str(MUSIC.get(key, ""))
  if path.is_empty() or not ResourceLoader.exists(path):
   push_warning("Missing music asset key: " + key)
@@ -62,6 +69,7 @@ func stop_music() -> void:
   _music_player.stop()
 
 func play_sfx(key: String) -> void:
+ _ensure_players()
  var path: String = str(SFX.get(key, ""))
  if path.is_empty() or not ResourceLoader.exists(path):
   return
@@ -72,6 +80,7 @@ func play_sfx(key: String) -> void:
  _sfx_player.play()
 
 func play_voice_for_speaker(speaker: String) -> void:
+ _ensure_players()
  var normalized := speaker.to_lower()
  var voice_key := ""
  if "nexus" in normalized or "operator" in normalized:
