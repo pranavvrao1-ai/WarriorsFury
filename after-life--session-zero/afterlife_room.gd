@@ -360,8 +360,10 @@ func _attach_robot_asset() -> void:
 		push_warning("Robot asset could not be imported as a scene: " + model_path)
 		return
 	for child in robot_root.get_children():
-		if child is MeshInstance3D or child == robot_head:
-			child.visible = false
+		if child is MeshInstance3D:
+			(child as MeshInstance3D).visible = false
+		elif child == robot_head:
+			robot_head.visible = false
 	var model := packed.instantiate() as Node3D
 	if model == null:
 		return
