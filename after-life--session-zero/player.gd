@@ -33,6 +33,7 @@ var _third_person_view: bool = false
 var _health: int = 100
 var _health_label: Label = null
 var _attack_damage: int = 34
+var _invulnerability_timer: float = 0.0
 
 var _current_interactable: Dictionary = {}
 
@@ -188,13 +189,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		head.rotation.x = clamp(head.rotation.x, -1.4, 1.4)
 
 func take_damage(amount: int) -> void:
-	if is_frozen or _cctv_index != 0:
+	if is_frozen or _cctv_index != 0 or _invulnerability_timer > 0.0:
 		return
 	_health = max(0, _health - amount)
 	_update_health_hud()
 	if _health <= 0:
 		_health = 100
-		global_position = Vector3(0.0, 0.05, 0.0)
+		_invulnerability_timer = 2.5
+		global_position = Vector3(0.0, 0.05, 5.0)
 		velocity = Vector3.ZERO
 		_update_health_hud()
 		_show_banner("SYSTEM REBOOT — PLAYER 07 RESTORED")
@@ -269,6 +271,7 @@ func _switch_to_cam(index: int) -> void:
 			_interact_label.visible = false
 
 func _physics_process(delta: float) -> void:
+	_invulnerability_timer = maxf(0.0, _invulnerability_timer - delta)
 	_rec_time += delta
 	_character_anim_time += delta
 	if _banner_timer > 0.0:
