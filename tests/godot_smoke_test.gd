@@ -71,6 +71,8 @@ func _run_smoke_test() -> void:
 		var zone_shape := zone.get_node_or_null("CollisionShape3D") as CollisionShape3D if zone != null else null
 		_check(zone_shape != null and zone_shape.shape != null, zone_name + " must have a collision shape.", failures)
 
+	var enemy_count := int(scene.call("get_needen_enemy_count")) if scene.has_method("get_needen_enemy_count") else -1
+	_check(enemy_count == 3, "Neo-Eden must contain three active security units.", failures)
 	var robot := scene.get_node_or_null("Robot operator")
 	_check(robot != null, "Environment must create the robot operator.", failures)
 	if robot != null:
