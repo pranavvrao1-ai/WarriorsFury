@@ -1,7 +1,7 @@
 name: Game checks
 
 concurrency:
-  group: game-checks-${{ github.ref }}
+  group: game-checks-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 on:
@@ -29,6 +29,7 @@ jobs:
 
   godot-headless:
     runs-on: ubuntu-latest
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4
