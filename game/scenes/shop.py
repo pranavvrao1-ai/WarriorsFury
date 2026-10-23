@@ -1,10 +1,10 @@
-
 import pygame
 
 from game.scenes.base import Scene
 from game.settings import WIDTH, HEIGHT, THEMES, WHITE, GREY
 from game.ui.effects import get_background, draw_scanlines
 from game.ui.text import get_font, draw_text
+from game.audio import audio
 
 
 class NexusShopScene(Scene):
@@ -41,19 +41,23 @@ class NexusShopScene(Scene):
 
     def _buy_selected(self):
         item_id = self.ITEMS[self.selected][0]
-        _, message = self.progression.purchase(item_id)
+        ok, message = self.progression.purchase(item_id)
         self.message = message
         self.message_timer = 2.5
+        audio.play_sfx("flash" if ok else "hit")
 
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_UP, pygame.K_w):
                 self.selected = (self.selected - 1) % len(self.ITEMS)
+                audio.play_sfx("click")
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.selected = (self.selected + 1) % len(self.ITEMS)
+                audio.play_sfx("click")
             elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self._buy_selected()
             elif event.key == pygame.K_ESCAPE:
+                audio.play_sfx("click")
                 self.on_done()
 
         elif event.type == pygame.MOUSEMOTION:
@@ -86,69 +90,79 @@ class NexusShopScene(Scene):
 
         draw_text(
             screen,
-            f"AVAILABLE POINTS: {self.progression.points}",
-            get_font(23, True),
+            f"AVAILABLE CREDITS: {self.progression.credits}",
+            get_font(20),
             WHITE,
-            (WIDTH // 2, 135),
+            (WIDTH // 2, 125),
             center=True,
         )
-
-        for i, (item_id, name, description, cost) in enumerate(self.ITEMS):
-            rect = self._rects()[i]
-            selected = i == self.selected
-            owned = item_id in self.progression.purchased_upgrades
-
-            pygame.draw.rect(
-                screen,
-                accent if selected else GREY,
-                rect,
-                2 if selected else 1,
-                border_radius=6,
-            )
-
-            status = "OWNED" if owned else f"{cost} PTS"
-
-            draw_text(
-                screen,
-                name,
-                get_font(21, selected),
-                WHITE,
-                (rect.x + 18, rect.y + 12),
-            )
-
-            draw_text(
-                screen,
-                description,
-                get_font(15),
-                GREY,
-                (rect.x + 18, rect.y + 39),
-            )
-
-            draw_text(
-                screen,
-                status,
-                get_font(17, True),
-                accent if owned else WHITE,
-                (rect.right - 18, rect.centery),
-                center=True,
-            )
 
         if self.message_timer > 0:
             draw_text(
                 screen,
                 self.message,
-                get_font(19, True),
+                get_font(18, True),
                 accent,
-                (WIDTH // 2, HEIGHT - 65),
+                (WIDTH // 2, 165),
+                center=True,
+            )
+
+        for i, (item_id, name, desc, cost) in enumerate(self.ITEMS):
+            rect = self._rects()[i]
+            selected = i == self.selected
+            owned = False
+
+            if item_id == "shield":
+                owned = self.progression.shield_capacity > 0
+            elif item_id == "armor":
+                owned = self.progression.armor_owned
+            elif item_id == "overclock":
+                owned = self.progression.overclock_owned
+
+            pygame.draw.rect(
+                screen,
+                accent if selected else (40, 50, 70),
+                rect,
+                2 if selected else 1,
+                border_radius=8,
+            )
+
+            if selected:
+                glow = pygame.Surface((rect.width, rect.height), pygame.SRCALPHA)
+                pygame.draw.rect(glow, (*accent, 25), glow.get_rect(), border_radius=8)
+                screen.blit(glow, rect.topleft)
+
+            draw_text(
+                screen,
+                f"{name} (OWNED)" if owned else name,
+                get_font(20, True),
+                WHITE,
+                (rect.x + 20, rect.y + 12),
+            )
+
+            draw_text(
+                screen,
+                desc,
+                get_font(15),
+                GREY,
+                (rect.x + 20, rect.y + 36),
+            )
+
+            draw_text(
+                screen,
+                f"{cost} CREDITS",
+                get_font(18, True),
+                accent,
+                (rect.right - 130, rect.centery),
                 center=True,
             )
 
         draw_text(
             screen,
-            "UP/DOWN: SELECT  |  ENTER: BUY  |  ESC: EXIT",
-            get_font(14),
+            "PRESS ESC TO RETURN",
+            get_font(15),
             GREY,
-            (WIDTH // 2, HEIGHT - 25),
+            (WIDTH // 2, HEIGHT - 35),
             center=True,
         )
 

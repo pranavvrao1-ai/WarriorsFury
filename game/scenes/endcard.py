@@ -4,6 +4,7 @@ from game.scenes.base import Scene
 from game.settings import WIDTH, HEIGHT, WHITE, GREY
 from game.ui.effects import get_background, draw_scanlines
 from game.ui.text import get_font, draw_text
+from game.audio import audio
 
 
 class EndCardScene(Scene):
@@ -11,9 +12,11 @@ class EndCardScene(Scene):
         super().__init__(game)
         self.on_done = on_done
         self.t = 0.0
+        audio.play_music("fear")
 
     def handle_event(self, event):
         if self.t > 1.5 and event.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+            audio.play_sfx("click")
             self.on_done()
 
     def update(self, dt):

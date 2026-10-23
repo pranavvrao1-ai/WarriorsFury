@@ -1,4 +1,13 @@
 """Global constants. Tweak numbers here instead of hunting through the code."""
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+ASSETS_DIR = BASE_DIR / "assets"
+MUSIC_DIR = BASE_DIR / "gameathon music"
+DIALOGUES_DIR = BASE_DIR / "dialougues"
+FOOTSTEPS_DIR = BASE_DIR / "footsteps"
+CHARACTERS_DIR = BASE_DIR / "characters"
+ROBOT_DIR = BASE_DIR / "robot"
 
 WIDTH, HEIGHT = 960, 540
 FPS = 60

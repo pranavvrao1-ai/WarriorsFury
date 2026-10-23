@@ -1,6 +1,4 @@
-
 import random
-
 import pygame
 
 from game.data.stages import STAGES, AMBIENT
@@ -11,6 +9,7 @@ from game.settings import WIDTH, HEIGHT, THEMES, WHITE, GREY, RED
 from game.ui.effects import get_background, draw_scanlines, draw_flash
 from game.ui.system_window import draw_system_window
 from game.ui.text import get_font, draw_text
+from game.audio import audio
 
 
 class CombatScene(Scene):
@@ -20,6 +19,9 @@ class CombatScene(Scene):
         self.stage_index = stage_index
         self.stage = STAGES[stage_index]
         self.on_done = on_done
+
+        # Play appropriate music
+        audio.play_music("boss" if stage_index == 2 else "cyber")
 
         self.player = Player(
             WIDTH / 2,
@@ -80,10 +82,12 @@ class CombatScene(Scene):
 
         if "boss" in waves[self.wave_index]:
             self.banner_text = "{r:NEXUS} HAS ENTERED THE ARENA."
+            audio.play_sfx("flash")
         else:
             self.banner_text = (
                 f"{{c:WAVE {self.wave_index + 1} OF {len(waves)}}}"
             )
+            audio.play_sfx("click")
 
         self.banner_t = self.banner_total = 1.5
 
@@ -166,6 +170,7 @@ class CombatScene(Scene):
 
         if not self.player.alive:
             self.state = "dead"
+            audio.play_sfx("explosion")
             return
 
         self._update_waves(dt)
@@ -224,6 +229,7 @@ class CombatScene(Scene):
             self.state = "won"
             self.win_t = 4.0
             self.flash = 1.0
+            audio.play_sfx("stage_clear")
 
             self.reward_message = (
                 self.game.progression.grant_stage_reward(
@@ -238,7 +244,12 @@ class CombatScene(Scene):
 
         if self.ambient_t <= 0:
             self.ambient_t = random.uniform(10, 18)
-            self.caption = [random.choice(AMBIENT), 3.0]
+            picked = random.choice(AMBIENT)
+            self.caption = [picked, 3.0]
+            if "keyboard" in picked or "clacking" in picked:
+                audio.play_sfx("typing_short")
+            elif "air conditioner" in picked:
+                audio.play_ambient("drone")
 
         if self.caption:
             self.caption[1] -= dt

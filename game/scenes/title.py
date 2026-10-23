@@ -1,4 +1,3 @@
-
 import random
 import pygame
 
@@ -6,6 +5,7 @@ from game.scenes.base import Scene
 from game.settings import WIDTH, HEIGHT, THEMES, WHITE, GREY
 from game.ui.effects import get_background, draw_scanlines, apply_glitch
 from game.ui.text import get_font, draw_text
+from game.audio import audio
 
 
 class TitleScene(Scene):
@@ -17,8 +17,10 @@ class TitleScene(Scene):
         self.sel = 0
         self.t = 0.0
         self.glitch_t = 0.0
+        audio.play_music("suspense")
 
     def _activate(self):
+        audio.play_sfx("click")
         if self.sel == 0:
             self.on_start()
         else:
@@ -39,15 +41,18 @@ class TitleScene(Scene):
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_UP, pygame.K_w):
                 self.sel = (self.sel - 1) % len(self.OPTIONS)
+                audio.play_sfx("click")
             elif event.key in (pygame.K_DOWN, pygame.K_s):
                 self.sel = (self.sel + 1) % len(self.OPTIONS)
+                audio.play_sfx("click")
             elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                 self._activate()
 
         elif event.type == pygame.MOUSEMOTION:
             for i, rect in enumerate(self._rects()):
                 if rect.collidepoint(event.pos):
-                    self.sel = i
+                    if self.sel != i:
+                        self.sel = i
 
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             for i, rect in enumerate(self._rects()):
@@ -69,7 +74,7 @@ class TitleScene(Scene):
             accent, (WIDTH // 2, 160), center=True
         )
         draw_text(
-            screen, "A STORY OF WARRIORS", get_font(28),
+            screen, "THE FINAL LEVEL", get_font(28),
             WHITE, (WIDTH // 2, 225), center=True
         )
 

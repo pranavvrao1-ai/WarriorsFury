@@ -1,5 +1,4 @@
 import math
-
 import pygame
 
 from game.scenes.base import Scene
@@ -7,13 +6,24 @@ from game.settings import WIDTH, HEIGHT, THEMES, SPEAKER_COLORS, WHITE, GREY
 from game.ui.effects import get_background, draw_scanlines, apply_glitch, draw_flash
 from game.ui.system_window import draw_system_window, draw_button, draw_panel, layout
 from game.ui.text import get_font, wrap_text, draw_text
+from game.ui.portraits import portraits
+from game.audio import audio
 
 WINDOW_CENTER = (WIDTH // 2, 290)
 CHOICE_EXTRA = 70
 
+SPEAKER_TAGS = {
+    "MC": "SUBJECT 07 // PROTAGONIST",
+    "UNKNOWN PLAYER": "UNVERIFIED SIGNAL // TERMINAL 09",
+    "UNKNOWN": "UNKNOWN ENTITY // SECURE LINE",
+    "NEXUS": "CENTRAL CORE // AI OVERLORD",
+    "RECEPTIONIST": "DESK 01 // AFTERLIFE LOUNGE",
+    "SHOPKEEPER": "NEIGHBORHOOD // 4TH STREET",
+}
+
 
 class StoryScene(Scene):
-    """Plays a list of story lines (see game/data/story.py)."""
+    """Plays a list of story lines (see game/data/story.py) with dialogue voice audio and character portraits."""
 
     CPS = 55  # typewriter characters per second
 
@@ -41,6 +51,7 @@ class StoryScene(Scene):
 
     # ---------- flow ----------
     def _next(self):
+        audio.stop_voice()
         while True:
             self.i += 1
             if self.i >= len(self.lines):
@@ -65,23 +76,43 @@ class StoryScene(Scene):
                 return
             self.current = line
             self.chars = float(len(line["text"])) if kind == "system" else 0.0
+
+            # Trigger voice acting audio clip if present
+            if kind == "say":
+                voice = line.get("voice")
+                if voice:
+                    audio.play_dialogue(voice)
+
             return
 
     def _apply_fx(self, line):
         name, value = line["name"], line["value"]
         if name == "flash":
             self.flash = 1.0
+            audio.play_sfx("flash")
         elif name == "glitch":
             self.glitch = value if value else 0.6
+            audio.play_sfx("glitch")
         elif name == "overlay":
             self.overlay = value
+        elif name == "phone_ring":
+            audio.play_sfx("phone_ring")
+        elif name == "typing":
+            audio.play_sfx("typing_short")
         elif name == "sound":
             self.caption = (value, 3.0)
+            if "keyboard" in value or "typing" in value:
+                audio.play_sfx("typing_short")
+            elif "phone" in value:
+                audio.play_sfx("phone_ring")
+            elif "air conditioner" in value:
+                audio.play_ambient("drone")
 
     def _finish(self):
         if self.finished:
             return
         self.finished = True
+        audio.stop_voice()
         if self.on_done:
             self.on_done()
         else:
@@ -91,6 +122,7 @@ class StoryScene(Scene):
         return self.current["text"] if self.current else ""
 
     def _confirm_choice(self):
+        audio.play_sfx("click")
         self.choice = None
         self._next()
 
@@ -108,6 +140,7 @@ class StoryScene(Scene):
     def handle_event(self, event):
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
             self.finished = True
+            audio.stop_voice()
             self.game.to_title()
             return
         if self.choice:
@@ -195,22 +228,56 @@ class StoryScene(Scene):
 
     def _draw_textbox(self, screen, accent):
         line = self.current
+        is_dialogue = (line["kind"] == "say")
+
         box = pygame.Rect(40, HEIGHT - 190, WIDTH - 80, 160)
         screen.blit(draw_panel(box.w, box.h, 232), box.topleft)
 
-        y = box.y + 20
-        if line["kind"] == "say":
-            color = SPEAKER_COLORS.get(line["who"], WHITE)
-            draw_text(screen, line["who"], get_font(22, True), color, (box.x + 28, y))
+        y = box.y + 18
+
+        if is_dialogue:
+            who = line["who"]
+            color = SPEAKER_COLORS.get(who, WHITE)
+
+            # Character portrait badge
+            portrait_surf = portraits.get_portrait(who, self.theme, self.t)
+            screen.blit(portrait_surf, (box.x + 18, box.y + 24))
+
+            text_x = box.x + 148
+            wrap_w = box.width - 168
+
+            # Speaker Name
+            draw_text(screen, who, get_font(22, True), color, (text_x, y))
+
+            # Sub-tag / ID
+            tag = SPEAKER_TAGS.get(who, "SYSTEM")
+            draw_text(screen, tag, get_font(13), GREY, (text_x + 180, y + 4))
+
+            # Live speaking waveform meter
+            voice_active = audio.is_voice_playing() or (self.chars < len(line["text"]))
+            portraits.draw_speaking_wave(screen, box.right - 140, y + 2, 90, 20, self.t, color, active=voice_active)
+
             y += 34
-        font = get_font(22)
-        remaining = int(self.chars)
-        for row in wrap_text(line["text"], font, box.width - 56):
-            if remaining <= 0:
-                break
-            draw_text(screen, row[:remaining], font, WHITE, (box.x + 28, y))
-            remaining -= len(row) + 1
-            y += 30
+            font = get_font(22)
+            remaining = int(self.chars)
+            for row in wrap_text(line["text"], font, wrap_w):
+                if remaining <= 0:
+                    break
+                draw_text(screen, row[:remaining], font, WHITE, (text_x, y))
+                remaining -= len(row) + 1
+                y += 28
+
+        else:
+            # Narration
+            font = get_font(22)
+            remaining = int(self.chars)
+            for row in wrap_text(line["text"], font, box.width - 56):
+                if remaining <= 0:
+                    break
+                draw_text(screen, row[:remaining], font, WHITE, (box.x + 28, y))
+                remaining -= len(row) + 1
+                y += 30
+
         if self.chars >= len(line["text"]) and int(self.t * 2) % 2 == 0:
             draw_text(screen, "v", get_font(20, True), WHITE, (box.right - 36, box.bottom - 36))
 
@@ -233,21 +300,26 @@ class StoryScene(Scene):
             pygame.draw.rect(screen, (150, 140, 110), paper, 3)
             f = get_font(16, True)
             if o == "receipt":
-                rows = [("AFTERLIFE GAMING LOUNGE", 70), ("ENTRY: 11:47 PM", 120), ("STATION: 07", 150),
-                        ("PLAYER 07 -", 240), ("SESSION STATUS: INCOMPLETE", 265)]
+                rows = [
+                    ("AFTERLIFE GAMING LOUNGE", 70),
+                    ("ENTRY: 11:47 PM", 120),
+                    ("STATION: 07", 150),
+                    ("PLAYER 07 —", 240),
+                    ("SESSION STATUS: INCOMPLETE", 265)
+                ]
                 for text, y in rows:
                     draw_text(screen, text, f, (40, 35, 30), (paper.centerx, paper.y + y - 40), center=True)
             else:
                 draw_text(screen, "YOU WOKE UP", get_font(30, True), (170, 20, 30), (paper.centerx, paper.centery - 20), center=True)
                 draw_text(screen, "TOO EARLY.", get_font(30, True), (170, 20, 30), (paper.centerx, paper.centery + 20), center=True)
         elif o == "eyes":
-            pulse = 0.6 + 0.4 * math.sin(self.t * 4)
+            pulse = 0.6 + 0.4 * math.sin(self.t * 6)
             for ex in (WIDTH // 2 - 60, WIDTH // 2 + 60):
-                for r, a in ((46, 25), (32, 50), (20, 110)):
+                for r, a in ((46, 30), (32, 60), (20, 130)):
                     glow = pygame.Surface((r * 2, r * 2), pygame.SRCALPHA)
-                    pygame.draw.circle(glow, (40, 140, 255, int(a * pulse)), (r, r), r)
+                    pygame.draw.circle(glow, (0, 180, 255, int(a * pulse)), (r, r), r)
                     screen.blit(glow, (ex - r, 190 - r))
-                pygame.draw.circle(screen, (180, 230, 255), (ex, 190), 9)
+                pygame.draw.circle(screen, (200, 245, 255), (ex, 190), 9)
         elif o == "monitor":
             m = pygame.Rect(WIDTH // 2 - 150, 22, 300, 140)
             pygame.draw.rect(screen, (10, 18, 40), m, border_radius=6)

@@ -1,4 +1,3 @@
-
 """Controls story progression, replays, and the NEXUS Shop."""
 
 from game.data.story import STORY
@@ -9,6 +8,7 @@ from game.scenes.title import TitleScene
 from game.scenes.level_choice import LevelChoiceScene
 from game.scenes.shop import NexusShopScene
 from game.entities.progression import PlayerProgression
+from game.audio import audio
 
 
 STEPS = [
@@ -95,6 +95,23 @@ def run_step(game, index):
         return
 
     kind, arg, theme = STEPS[index]
+
+    if kind == "story":
+        if arg == "act1":
+            audio.play_music("cafe")
+        elif arg == "act2_intro":
+            audio.play_music("cyber")
+        elif arg in ("nexus", "collapse"):
+            audio.play_music("tension")
+        elif arg == "act3":
+            audio.play_music("awakening")
+        elif arg == "act4":
+            audio.play_music("fear")
+        elif arg == "post":
+            audio.play_music("drone")
+
+    elif kind == "combat":
+        audio.play_music("boss" if arg == 2 else "cyber")
 
     def done():
         print("Completed:", kind, arg)
