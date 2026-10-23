@@ -52,6 +52,15 @@ func _run_smoke_test() -> void:
 				var before_y: float = visual.position.y
 				player.call("_update_character_animation", true)
 				_check(absf(visual.position.y - before_y) > 0.001, "Procedural walking animation must move the player visual.", failures)
+		var third_person_camera := player.get_node_or_null("Head/ThirdPersonCamera") as Camera3D
+		_check(third_person_camera != null, "Player must have a third-person follow camera.", failures)
+		if third_person_camera != null:
+			player.call("_set_third_person_view", true)
+			_check(visual.visible, "Third-person mode should show the player character.", failures)
+			_check(third_person_camera.current, "Third-person mode should activate its camera.", failures)
+			player.call("_set_third_person_view", false)
+			_check(not visual.visible, "First-person mode should hide the full-body player mesh.", failures)
+			_check((player.get_node_or_null("Head/Camera3D") as Camera3D).current, "First-person mode should restore the first-person camera.", failures)
 		var player_shape := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
 		_check(player_shape != null and player_shape.shape != null, "Player collision shape must be assigned.", failures)
 
