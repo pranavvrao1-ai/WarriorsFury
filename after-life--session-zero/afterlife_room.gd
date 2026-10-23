@@ -136,7 +136,7 @@ func _animate_robot(delta: float) -> void:
 		var dir := cam.global_position - robot_root.global_position
 		dir.y = 0.0
 		if dir.length() > 0.5 and dir.length() < 18.0:
-			var target_rot_y := atan2(dir.x, dir.z)
+			var target_rot_y := atan2(dir.x, dir.z) - robot_root.global_rotation.y
 			robot_head.rotation.y = lerp_angle(robot_head.rotation.y, target_rot_y, delta * 2.5)
 
 func _animate_security_cameras(delta: float) -> void:
@@ -419,7 +419,9 @@ func _play_first_character_animation(root: Node) -> void:
 func _make_robot() -> void:
 	robot_root = Node3D.new()
 	robot_root.name = "Robot operator"
-	robot_root.position = Vector3(0, 0, -17.2)
+	robot_root.position = Vector3(0, 0, HALF + 4.0)
+	# Guard the outside of the entrance and face inward toward approaching visitors.
+	robot_root.rotation.y = PI
 	robot_base_y = 0.0
 	add_child(robot_root)
 
