@@ -19,11 +19,43 @@ var _interact_label: Label = null
 var _banner_label: Label = null
 var _banner_timer: float = 0.0
 var _rec_time: float = 0.0
+var _audio: Node = null
+var _character_visual: Node3D = null
+var _was_moving: bool = false
 
 var _current_interactable: Dictionary = {}
 
 func _ready() -> void:
 	_create_hud()
+	_audio = get_node_or_null("../AudioManager")
+	_attach_character_model()
+
+func _attach_character_model() -> void:
+	var model_path := "res://characters/male3.glb"
+	if not ResourceLoader.exists(model_path):
+		push_warning("Player model missing: " + model_path)
+		return
+	var packed := load(model_path) as PackedScene
+	if packed == null:
+		push_warning("Player model could not be imported as a scene: " + model_path)
+		return
+	_character_visual = packed.instantiate() as Node3D
+	if _character_visual == null:
+		push_warning("Player model root is not Node3D.")
+		return
+	_character_visual.name = "PlayerCharacterVisual"
+	add_child(_character_visual)
+	_play_idle_animation(_character_visual)
+
+func _play_idle_animation(root: Node) -> void:
+	if root is AnimationPlayer:
+		var animation_player := root as AnimationPlayer
+		for animation_name in animation_player.get_animation_list():
+			if String(animation_name).to_lower().contains("idle"):
+				animation_player.play(animation_name)
+				return
+	for child in root.get_children():
+		_play_idle_animation(child)
 
 func _create_hud() -> void:
 	var canvas := CanvasLayer.new()
@@ -170,6 +202,10 @@ func _physics_process(delta: float) -> void:
 		if not is_on_floor():
 			velocity.y -= gravity * delta
 		move_and_slide()
+	var moving_now := Vector2(velocity.x, velocity.z).length() > 0.8 and is_on_floor()
+	if moving_now and not _was_moving and _audio != null and _audio.has_method("play_footstep"):
+		_audio.play_footstep()
+	_was_moving = moving_now
 		return
 
 	# --- SOLID WALKING PHYSICS (NO FLYING) ---
