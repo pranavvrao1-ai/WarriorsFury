@@ -73,9 +73,14 @@ func _on_zone_terminal07_entered(body: Node3D) -> void:
 			call_deferred("launch_terminal07")
 
 func _on_zone_nexus_entered(body: Node3D) -> void:
-	if body == player and current_act == Act.ACT2_SIMULATION and not _nexus_confronted:
-		_nexus_confronted = true
-		call_deferred("on_nexus_stage_confrontation")
+	if body != player or current_act != Act.ACT2_SIMULATION or _nexus_confronted:
+		return
+	var remaining := int(room_root.call("get_needen_enemy_count")) if room_root != null and room_root.has_method("get_needen_enemy_count") else 0
+	if remaining > 0:
+		show_banner_story("NEXUS CORE LOCKED — NEUTRALIZE %d SECURITY UNITS FIRST" % remaining)
+		return
+	_nexus_confronted = true
+	call_deferred("on_nexus_stage_confrontation")
 
 func _on_zone_exit_entered(body: Node3D) -> void:
 	if body == player and current_act == Act.ACT3_AWAKENING and not _exit_triggered:
@@ -486,8 +491,8 @@ func _start_act_2() -> void:
 	if player:
 		player.is_frozen = false
 		player.global_position = Vector3(0, 0.05, 0.0)
-	show_dialog("NEXUS [AI CONSTRUCT]", "Welcome to Neo-Eden, Player 07. Clear the simulation stages to find your exit.", func():
-		show_banner_story("ACT II: THE SIMULATION (2189) — Confront NEXUS Core on the Arena Stage")
+	show_dialog("NEXUS [AI CONSTRUCT]", "Welcome to Neo-Eden, Player 07. Neutralize all three security units, then approach the Nexus Core.", func():
+		show_banner_story("ACT II: Use the mouse to aim and left-click to fire. Clear 3 security units, then approach NEXUS.")
 	)
 
 func on_nexus_stage_confrontation() -> void:
