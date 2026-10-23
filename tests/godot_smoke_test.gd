@@ -72,7 +72,9 @@ func _run_smoke_test() -> void:
 		_check(zone_shape != null and zone_shape.shape != null, zone_name + " must have a collision shape.", failures)
 
 	var enemy_count := int(scene.call("get_needen_enemy_count")) if scene.has_method("get_needen_enemy_count") else -1
-	_check(enemy_count == 3, "Neo-Eden must contain three active security units.", failures)
+	_check(enemy_count == 3, "Neo-Eden must contain three security units, created even while the simulation is hidden.", failures)
+	_check(player != null and player.has_method("_perform_attack") and player.has_method("take_damage"), "Player must expose attack and health logic.", failures)
+	_check(ResourceLoader.exists("res://after-life--session-zero/sim_enemy.gd"), "Simulation enemy script must be part of the project.", failures)
 	var robot := scene.get_node_or_null("Robot operator")
 	_check(robot != null, "Environment must create the robot operator.", failures)
 	if robot != null:
