@@ -1,0 +1,9 @@
+# Minimal material definition for the preserved Cyberpunk Robot OBJ.
+# The animated GLB is used by the Godot scene; this material keeps the legacy OBJ import valid.
+newmtl lambert5SG
+Ka 0.18 0.18 0.2
+Kd 0.62 0.66 0.72
+Ks 0.25 0.25 0.28
+Ns 24.0
+d 1.0
+illum 2
