@@ -35,4 +35,4 @@ jobs:
       - name: Import Godot resources
         run: godot --headless --path . --editor --import --quit
       - name: Parse scripts and boot main scene
-        run: godot --headless --path . --path . --quit-after 180 --verbose
+        run: godot --headless --path . --quit-after 180 --verbose
