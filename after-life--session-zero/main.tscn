@@ -1,18 +1,79 @@
-[gd_scene format=3 uid="uid://vn2ms7ng00tx"]
+[gd_scene load_steps=9 format=3 uid="uid://vn2ms7ng00tx"]
+
+[ext_resource type="Script" path="res://afterlife_room.gd" id="1_room"]
+[ext_resource type="Script" path="res://player.gd" id="2_player"]
+[ext_resource type="Script" path="res://story_manager.gd" id="3_story"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_theap"]
-size = Vector2(20, 20)
+size = Vector2(85, 85)
 
-[sub_resource type="BoxMesh" id="BoxMesh_theap"]
-size = Vector3(20, 1, 1)
+[sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
+size = Vector3(85, 1, 85)
 
-[node name="Node3D" type="Node3D" unique_id=1017030985]
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 0.4
+height = 1.8
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=544675130]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.0015201569, 0.005804658, -0.0027832985)
+[sub_resource type="BoxShape3D" id="BoxShape3D_t07"]
+size = Vector3(7.0, 3.0, 7.0)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_nexus"]
+size = Vector3(8.0, 3.0, 8.0)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_exit"]
+size = Vector3(14.0, 3.0, 6.0)
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_room")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
 mesh = SubResource("PlaneMesh_theap")
 
-[node name="StaticBody3D" type="StaticBody3D" parent="MeshInstance3D" unique_id=1473671820]
+[node name="StaticBody3D" type="StaticBody3D" parent="Floor"]
 
-[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D/StaticBody3D" unique_id=2092201948]
-mesh = SubResource("BoxMesh_theap")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Floor/StaticBody3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_floor")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 33)
+collision_layer = 3
+collision_mask = 3
+script = ExtResource("2_player")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="Head" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Player/Head"]
+current = true
+
+[node name="StoryManager" type="Node" parent="."]
+script = ExtResource("3_story")
+
+[node name="TriggerZone_Terminal07" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 1.5, 8.0)
+collision_layer = 0
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerZone_Terminal07"]
+shape = SubResource("BoxShape3D_t07")
+
+[node name="TriggerZone_NexusStage" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -9.0)
+collision_layer = 0
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerZone_NexusStage"]
+shape = SubResource("BoxShape3D_nexus")
+
+[node name="TriggerZone_ExitCafe" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 20.5)
+collision_layer = 0
+collision_mask = 3
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TriggerZone_ExitCafe"]
+shape = SubResource("BoxShape3D_exit")
