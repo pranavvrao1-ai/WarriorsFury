@@ -382,7 +382,7 @@ func _attach_robot_asset() -> void:
 
 func _make_asset_characters() -> void:
 	_spawn_character_asset("res://characters/male1.glb", "Cafe guest A", Vector3(-10.0, 0.0, -5.0))
-	_spawn_character_asset("res://characters/female4.glb", "Cafe guest B", Vector3(-6.0, 0.0, -5.0))
+	_spawn_character_asset("res://characters/female4.glb", "Cafe Shopkeeper", Vector3(6.5, 0.0, HALF + 4.5))
 	_spawn_character_asset("res://characters/male4.glb", "Cafe guest C", Vector3(9.0, 0.0, -5.0))
 
 func _spawn_character_asset(path: String, node_name: String, spawn_position: Vector3) -> void:
@@ -398,6 +398,10 @@ func _spawn_character_asset(path: String, node_name: String, spawn_position: Vec
 		return
 	character.name = node_name
 	character.position = spawn_position
+	if node_name == "Cafe Shopkeeper":
+		# Keep the shopkeeper outside the cafe and facing the entrance for the whole game.
+		character.rotation.y = PI
+		_city_exterior_nodes.append(character)
 	add_child(character)
 	_play_first_character_animation(character)
 
