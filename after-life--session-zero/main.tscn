@@ -52,6 +52,13 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.65, 0)
 [node name="Camera3D" type="Camera3D" parent="Player/Head"]
 current = true
 
+[node name="ThirdPersonCamera" type="Camera3D" parent="Player/Head"]
+position = Vector3(0, 0.1, 4.2)
+rotation = Vector3(-0.12, 0, 0)
+fov = 75.0
+near = 0.08
+far = 400.0
+
 [node name="StoryManager" type="Node" parent="."]
 script = ExtResource("3_story")
 
